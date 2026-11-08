@@ -24,6 +24,12 @@
     
     <!-- ExifReader -->
     <script src="https://cdn.jsdelivr.net/npm/exifreader@4.23.0/dist/exif-reader.min.js"></script>
+    
+    <!-- EmailJS SDK (Versión estándar compatible con PC y Celular) -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script type="text/javascript">
+        emailjs.init("rESIJn9mCExlpi316");
+    </script>
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
@@ -47,7 +53,7 @@
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-xl font-bold flex items-center gap-2">📍 Punto <span class="text-blue-400">Crítico SM</span></h1>
             <div class="flex gap-3 items-center">
-                <button id="btnAdminNav" onclick="toggleAdmin()" class="hidden bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-2 px-4 rounded-lg transition">Panel Admin</button>
+                <button id="btnAdminNav" onclick="toggleAdmin()" class="hidden bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-2 px-4 rounded-lg transition">Panel Admin & Métricas</button>
                 <button id="btnLogin" onclick="abrirLogin()" class="bg-white/20 hover:bg-white/30 font-semibold py-2 px-4 rounded-lg transition">Admin Login</button>
                 <button id="btnLogout" onclick="cerrarSesionAdmin()" class="hidden bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow">Cerrar Sesión</button>
             </div>
@@ -100,7 +106,7 @@
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Tipos de Residuos Presentes:</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Tipos de Residuos Presentes (Puedes marcar varios):</label>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition"><input type="checkbox" value="Plásticos y Empaques" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded"><span class="text-sm font-medium">♻️ Plásticos/Empaques</span></label>
                             <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition"><input type="checkbox" value="Escombros" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded"><span class="text-sm font-medium">🧱 Escombros</span></label>
@@ -143,10 +149,14 @@
                 <table class="w-full text-left border-collapse whitespace-nowrap">
                     <thead class="bg-blue-900 text-white">
                         <tr>
-                            <th class="p-4 font-semibold">Radicado / Barrio</th><th class="p-4 font-semibold">Ciudadano / Correo</th>
-                            <th class="p-4 font-semibold">Residuos</th><th class="p-4 font-semibold text-center">Foto</th>
-                            <th class="p-4 font-semibold text-center">Val.</th><th class="p-4 font-semibold">Tiempo</th>
-                            <th class="p-4 font-semibold">Estado</th><th class="p-4 font-semibold text-center">Acción</th>
+                            <th class="p-4 font-semibold">Radicado / Barrio</th>
+                            <th class="p-4 font-semibold">Ciudadano / Correo</th>
+                            <th class="p-4 font-semibold">Mezcla de Residuos</th>
+                            <th class="p-4 font-semibold text-center">Evidencia EXIF</th>
+                            <th class="p-4 font-semibold text-center">Validaciones</th>
+                            <th class="p-4 font-semibold">Tiempos</th>
+                            <th class="p-4 font-semibold">Gestión de Estado</th>
+                            <th class="p-4 font-semibold text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="adminTableBody" class="divide-y divide-gray-200"></tbody>
@@ -163,7 +173,7 @@
                 <button onclick="cerrarLogin()" class="text-gray-400 hover:text-gray-800 text-3xl font-bold">&times;</button>
             </div>
             <form id="loginForm" class="space-y-4">
-                <input type="email" id="emailLogin" placeholder="Correo (@equipo.com)" required class="w-full px-4 py-3 border rounded-xl">
+                <input type="email" id="emailLogin" placeholder="Correo institucional (@equipo.com)" required class="w-full px-4 py-3 border rounded-xl">
                 <input type="password" id="passLogin" placeholder="Contraseña" required class="w-full px-4 py-3 border rounded-xl">
                 <button type="submit" class="w-full bg-blue-900 text-white font-bold py-3 px-4 rounded-xl mt-2">Verificar Acceso</button>
             </form>
@@ -177,6 +187,7 @@
         </div>
     </div>
 
+    <!-- FIREBASE SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -187,18 +198,38 @@
             projectId: "punto-critico-sm",
             storageBucket: "punto-critico-sm.firebasestorage.app",
             messagingSenderId: "617349673858",
-            appId: "1:617349673858:web:ed5f66b86d29afeb9559b"
+            appId: "1:617349673858:web:ed5f66b86d29afeb9559b",
+            measurementId: "G-JB65HST5G6"
         };
         
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        window.db = getFirestore(app);
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.getDocs = getDocs;
+        window.updateDoc = updateDoc;
+        window.deleteDoc = deleteDoc;
+        window.doc = doc;
+        
+        if (typeof window.cargarReportesFirebase === "function") {
+            window.cargarReportesFirebase();
+        }
+    </script>
 
+    <!-- SCRIPT PRINCIPAL UNIFICADO -->
+    <script>
         let isAdmin = false;
-        let reportesDB = [];
-        let marcadoresPublicos = [];
-        let selectedLat = 11.24079;
-        let selectedLng = -74.19904;
-        let userMarker;
+        var map = L.map('map').setView([11.24079, -74.19904], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        var userMarker;
+        var selectedLat = 11.24079;
+        var selectedLng = -74.19904;
+        var marcadoresPublicos = [];
+        var reportesDB = [];
+
+        var redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        var blueIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        var greenIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
 
         function showToast(message, type = 'success', duration = 4000) {
             const container = document.getElementById('toastContainer');
@@ -208,15 +239,12 @@
             toast.className = `${colors} text-white px-6 py-4 rounded-xl shadow-2xl font-semibold flex items-center gap-3 toast-enter max-w-md border-2 border-white/20`;
             toast.innerHTML = `<span class="text-2xl">${icon}</span><span>${message}</span>`;
             container.appendChild(toast);
-            setTimeout(() => { toast.remove(); }, duration);
+            setTimeout(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
         }
-
-        var map = L.map('map').setView([11.24079, -74.19904], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        
-        var redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34] });
-        var blueIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34] });
-        var greenIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34] });
 
         map.on('click', function(e) {
             selectedLat = e.latlng.lat; selectedLng = e.latlng.lng;
@@ -224,239 +252,424 @@
             userMarker = L.marker([selectedLat, selectedLng]).addTo(map).bindPopup("Ubicación seleccionada.").openPopup();
         });
 
-        window.usarMiUbicacion = function() {
+        function usarMiUbicacion() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function(position) {
-                    selectedLat = position.coords.latitude; selectedLng = position.coords.longitude;
+                    selectedLat = position.coords.latitude;
+                    selectedLng = position.coords.longitude;
                     map.setView([selectedLat, selectedLng], 16);
                     if (userMarker) map.removeLayer(userMarker);
-                    userMarker = L.marker([selectedLat, selectedLng]).addTo(map).bindPopup("¡Estás aquí!").openPopup();
+                    userMarker = L.marker([selectedLat, selectedLng]).addTo(map).bindPopup("¡Estás aquí! GPS obtenido.").openPopup();
                     showToast("GPS obtenido correctamente.");
-                }, function() { showToast("Error al obtener GPS.", "error"); });
-            } else { showToast("Navegador sin GPS.", "error"); }
+                }, function() { showToast("No se pudo obtener tu ubicación GPS.", "error"); });
+            } else { showToast("Tu navegador no soporta geolocalización.", "error"); }
         }
 
-        async function cargarReportesFirebase() {
+        window.cargarReportesFirebase = async function() {
+            if (!window.db) return;
             try {
-                const querySnapshot = await getDocs(collection(db, "reportes_atesa"));
+                const querySnapshot = await window.getDocs(window.collection(window.db, "reportes_atesa"));
                 reportesDB = [];
-                querySnapshot.forEach((docSnap) => { reportesDB.push({ firestoreId: docSnap.id, ...docSnap.data() }); });
+                querySnapshot.forEach((docSnap) => {
+                    reportesDB.push({ firestoreId: docSnap.id, ...docSnap.data() });
+                });
                 actualizarInterfaz();
-            } catch (error) { console.error("Error Firebase:", error); }
+            } catch (error) {
+                console.error("Error al cargar de Firebase:", error);
+            }
+        };
+
+        function obtenerTextoTiempo(rep) {
+            if(rep.estado === 'activo') return "Pendiente (ATESA)";
+            else if(rep.estado === 'proceso') {
+                let min = Math.floor((Date.now() - (rep.timestampProceso || rep.timestamp)) / (1000*60));
+                return `En recolección (${min} min)`;
+            } else if(rep.estado === 'resuelto') {
+                let min = Math.floor(((rep.timestampResolucion || Date.now()) - rep.timestamp) / (1000*60));
+                return `Solucionado en ${Math.floor(min/60)}h ${min % 60}m`;
+            }
+            return "N/A";
         }
 
-        function actualizarInterfaz() {
+        function actualizarEstadisticasYZonas() {
             document.getElementById('statActivos').innerText = reportesDB.filter(r => r.estado === 'activo').length;
             document.getElementById('statProceso').innerText = reportesDB.filter(r => r.estado === 'proceso').length;
             document.getElementById('statResueltos').innerText = reportesDB.filter(r => r.estado === 'resuelto').length;
             
+            let conteoBarrios = {};
+            reportesDB.forEach(r => {
+                if (r.barrio) {
+                    let b = r.barrio.trim().charAt(0).toUpperCase() + r.barrio.trim().slice(1).toLowerCase();
+                    conteoBarrios[b] = (conteoBarrios[b] || 0) + 1;
+                }
+            });
+            let contenedor = document.getElementById('estadisticasBarrios');
+            contenedor.innerHTML = '';
+            Object.keys(conteoBarrios).sort((a,b) => conteoBarrios[b] - conteoBarrios[a]).forEach(b => {
+                contenedor.innerHTML += `
+                    <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                        <p class="font-bold text-blue-900">${b}</p>
+                        <span class="bg-blue-600 text-white font-bold px-3 py-1 rounded-full text-sm">${conteoBarrios[b]} rep.</span>
+                    </div>`;
+            });
+        }
+
+        function actualizarInterfaz() {
+            actualizarEstadisticasYZonas();
             var feedList = document.getElementById('feedList');
             var adminTable = document.getElementById('adminTableBody');
-            feedList.innerHTML = ''; adminTable.innerHTML = '';
-            marcadoresPublicos.forEach(m => map.removeLayer(m)); marcadoresPublicos = [];
-            
+            feedList.innerHTML = '';
+            adminTable.innerHTML = '';
+            marcadoresPublicos.forEach(m => map.removeLayer(m));
+            marcadoresPublicos = [];
+
             [...reportesDB].reverse().forEach(function(rep) {
-                let badgeClass = "bg-red-100 text-red-800 border-red-200"; let statusText = "Enviado a ATESA"; let pinIcon = redIcon;
-                if (rep.estado === 'proceso') { badgeClass = "bg-blue-100 text-blue-800 border-blue-200"; statusText = "Operarios ATESA en ruta"; pinIcon = blueIcon; }
-                if (rep.estado === 'resuelto') { badgeClass = "bg-green-100 text-green-800 border-green-200"; statusText = "Punto Limpio ATESA ✅"; pinIcon = greenIcon; }
+                let badgeClass = "bg-red-100 text-red-800 border-red-200";
+                let statusText = "Enviado a ATESA";
+                let pinIcon = redIcon;
+                if (rep.estado === 'proceso') {
+                    badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
+                    statusText = "Operarios ATESA en ruta";
+                    pinIcon = blueIcon;
+                } else if (rep.estado === 'resuelto') {
+                    badgeClass = "bg-green-100 text-green-800 border-green-200";
+                    statusText = "Punto Limpio ATESA ✅";
+                    pinIcon = greenIcon;
+                }
 
                 feedList.innerHTML += `
                     <div class="bg-gray-50 border rounded-xl p-4 hover:shadow-md transition relative overflow-hidden">
                         <div class="absolute top-0 right-0 bg-gray-200 text-gray-700 text-xs font-mono px-2 py-1 rounded-bl-lg font-bold">${rep.radicado}</div>
                         <h4 class="font-bold text-blue-900 text-sm w-2/3 leading-tight mt-4">${rep.tipo}</h4>
                         <span class="inline-block mt-2 text-xs font-bold px-2.5 py-1 rounded-full border ${badgeClass}">${statusText}</span>
-                        <p class="text-sm text-gray-700 mt-2">📍 Sector: <b>${rep.barrio}</b></p>
-                        <p class="text-xs text-gray-500 mt-0.5">👤 Por: <span class="font-medium text-gray-700">${rep.nombre}</span> ${isAdmin ? `<span class="text-blue-600 font-mono font-bold ml-1">(${rep.correo})</span>` : ''}</p>
+                        <p class="text-sm text-gray-700 mt-2">Sector: <b>${rep.barrio}</b></p>
+                        <p class="text-xs text-gray-500 mt-0.5">Por: <span class="font-medium text-gray-700">${rep.nombre}</span>
+                        ${isAdmin ? `<span class="text-blue-600 font-mono font-bold ml-1">(${rep.correo})</span>` : ''} • ${rep.fechaCreacion}</p>
                         <div class="mt-3 pt-2 border-t flex justify-between items-center text-xs">
-                            <span class="text-gray-600 font-medium">👥 ${rep.validaciones || 0} vecinos confirman</span>
-                            <button onclick="confirmarReporte('${rep.firestoreId}')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-semibold">Confirmar</button>
+                            <span class="text-gray-600 font-medium">${rep.validaciones || 0} vecinos confirman</span>
+                            <button onclick="confirmarReporte('${rep.firestoreId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">Confirmar</button>
                         </div>
                     </div>`;
 
+                let exifAlerta = rep.esAntigua 
+                    ? '<br><span class="text-xs bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-bold">⚠️ Foto Antigua</span>' 
+                    : '<br><span class="text-xs text-green-600 font-semibold">✅ Foto Reciente</span>';
+
                 adminTable.innerHTML += `
                     <tr class="hover:bg-gray-50 transition">
-                        <td class="p-4 text-sm font-bold">${rep.radicado}<br>${rep.barrio}</td>
-                        <td class="p-4 text-xs font-semibold">${rep.nombre}<br><span class="text-blue-600">${rep.correo}</span></td>
-                        <td class="p-4 text-xs">${rep.tipo}</td>
-                        <td class="p-4 text-center"><button onclick="abrirFoto('${rep.foto}')" class="bg-blue-100 text-blue-700 py-1 px-3 rounded-lg text-sm font-bold">Ver</button>${rep.esAntigua ? '<br><span class="text-xs text-orange-600 font-bold">Foto Antigua</span>' : ''}</td>
-                        <td class="p-4 text-center font-bold">${rep.validaciones || 0}</td>
-                        <td class="p-4 text-xs">${rep.estado === 'activo' ? 'Pendiente' : (rep.estado === 'proceso' ? 'En ruta' : 'Solucionado')}</td>
-                        <td class="p-4"><select onchange="cambiarEstadoAdmin('${rep.firestoreId}', this.value)" class="p-2 border rounded-lg text-sm"><option value="activo" ${rep.estado==='activo'?'selected':''}>Reportado</option><option value="proceso" ${rep.estado==='proceso'?'selected':''}>En Ruta</option><option value="resuelto" ${rep.estado==='resuelto'?'selected':''}>Resuelto</option></select></td>
-                        <td class="p-4 text-center"><button onclick="eliminarReporte('${rep.firestoreId}')" class="bg-red-100 text-red-700 py-1 px-2 rounded-lg font-bold text-sm">Eliminar</button></td>
+                        <td class="p-4"><span class="text-xs font-mono text-gray-500 font-bold">${rep.radicado}</span><br><span class="font-bold text-gray-800">${rep.barrio}</span></td>
+                        <td class="p-4 text-xs font-semibold text-gray-700">${rep.nombre}<br><span class="text-blue-600 font-normal">${rep.correo}</span></td>
+                        <td class="p-4 font-semibold text-gray-800 text-xs whitespace-normal w-48 leading-tight">${rep.tipo}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="abrirFoto('${rep.foto}')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 py-1.5 px-3 rounded-lg font-semibold transition text-sm">Ver</button>
+                            ${exifAlerta}
+                        </td>
+                        <td class="p-4 text-center font-bold text-blue-900">${rep.validaciones || 0}</td>
+                        <td class="p-4 text-xs font-bold">${obtenerTextoTiempo(rep)}</td>
+                        <td class="p-4">
+                            <select onchange="cambiarEstadoAdmin('${rep.firestoreId}', this.value)" class="w-full p-2.5 border rounded-lg font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm cursor-pointer">
+                                <option value="activo" ${rep.estado==='activo'?'selected':''}>Reportado ATESA</option>
+                                <option value="proceso" ${rep.estado==='proceso'?'selected':''}>En Gestión / Ruta</option>
+                                <option value="resuelto" ${rep.estado==='resuelto'?'selected':''}>Resuelto</option>
+                            </select>
+                        </td>
+                        <td class="p-4 text-center">
+                            <button onclick="eliminarReporte('${rep.firestoreId}')" class="bg-red-100 hover:bg-red-600 hover:text-white text-red-700 py-1.5 px-3 rounded-lg font-semibold transition text-sm shadow-sm">Eliminar</button>
+                        </td>
                     </tr>`;
 
-                if (rep.lat && rep.lng) { marcadoresPublicos.push(L.marker([rep.lat, rep.lng], { icon: pinIcon }).addTo(map).bindPopup(`<b>${rep.radicado}</b><br>${rep.barrio}`)); }
+                if (rep.lat && rep.lng) {
+                    let marker = L.marker([rep.lat, rep.lng], { icon: pinIcon }).addTo(map).bindPopup(`<b>${rep.radicado}</b><br>Barrio: ${rep.barrio}<br>Estado: ${statusText}`);
+                    marcadoresPublicos.push(marker);
+                }
             });
         }
 
-        window.confirmarReporte = async function(id) {
-            let rep = reportesDB.find(r => r.firestoreId === id);
-            if (rep) { await updateDoc(doc(db, "reportes_atesa", id), { validaciones: (rep.validaciones || 0) + 1 }); showToast("¡Has validado este punto!"); cargarReportesFirebase(); }
+        window.confirmarReporte = async function(firestoreId) {
+            let rep = reportesDB.find(r => r.firestoreId === firestoreId);
+            if (rep) {
+                let nuevasValidaciones = (rep.validaciones || 0) + 1;
+                await window.updateDoc(window.doc(window.db, "reportes_atesa", firestoreId), { validaciones: nuevasValidaciones });
+                showToast("¡Gracias! Has validado este punto crítico.");
+                window.cargarReportesFirebase();
+            }
         }
 
-        window.eliminarReporte = async function(id) {
-            if(confirm("¿Eliminar este reporte?")) { await deleteDoc(doc(db, "reportes_atesa", id)); showToast("Reporte eliminado", "info"); cargarReportesFirebase(); }
+        window.eliminarReporte = async function(firestoreId) {
+            if(confirm("¿Estás seguro de eliminar este reporte de la nube?")) {
+                await window.deleteDoc(window.doc(window.db, "reportes_atesa", firestoreId));
+                showToast("Reporte eliminado de la base de datos.", "info");
+                window.cargarReportesFirebase();
+            }
         }
 
+        // ENVÍO DE FORMULARIO CON COMPRESIÓN AUTOMÁTICA PARA CELULAR Y PC + EMAILJS ORIGINAL
         document.getElementById('reportForm').addEventListener('submit', function (e) {
             e.preventDefault();
-            const checks = document.querySelectorAll('.tipoResiduoCheckbox:checked');
-            if (checks.length === 0) return document.getElementById('errorCheckbox').classList.remove('hidden');
-            document.getElementById('errorCheckbox').classList.add('hidden');
-            
-            let btn = document.getElementById('btnSubmit');
-            btn.disabled = true; btn.classList.replace('bg-green-600', 'bg-gray-500');
-            document.getElementById('btnText').innerHTML = 'Comprimiendo y Guardando...';
-            
-            let archivoFoto = document.getElementById('fotoInput').files[0];
-            if (!archivoFoto) return;
+            const checkboxesSeleccionados = document.querySelectorAll('.tipoResiduoCheckbox:checked');
+            const errorCheckbox = document.getElementById('errorCheckbox');
+            if (checkboxesSeleccionados.length === 0) {
+                errorCheckbox.classList.remove('hidden');
+                return;
+            }
+            errorCheckbox.classList.add('hidden');
+            let tiposSeleccionados = Array.from(checkboxesSeleccionados).map(cb => cb.value).join(' + ');
+
+            const btnSubmit = document.getElementById('btnSubmit');
+            const btnText = document.getElementById('btnText');
+            btnSubmit.disabled = true;
+            btnSubmit.classList.replace('bg-green-600', 'bg-gray-500');
+            btnText.innerHTML = '<span class="loader"></span> Procesando foto y enviando...';
+
+            var nombre = document.getElementById('nombreCiudadano').value;
+            var correo = document.getElementById('correoCiudadano').value;
+            var barrio = document.getElementById('barrioInput').value;
+            var archivoFoto = document.getElementById('fotoInput').files[0];
 
             let esAntigua = false;
             try {
                 ExifReader.load(archivoFoto).then(tags => {
                     if (tags && tags['DateTimeOriginal']) {
                         let anioFoto = parseInt(tags['DateTimeOriginal'].description.substring(0,4));
-                        if (anioFoto < new Date().getFullYear()) esAntigua = true; 
+                        if (anioFoto < new Date().getFullYear()) {
+                            esAntigua = true;
+                        }
                     }
-                    procesarYGuardar();
-                }).catch(() => { procesarYGuardar(); });
-            } catch (err) { procesarYGuardar(); }
-
-            function procesarYGuardar() {
-                const lector = new FileReader();
-                lector.onload = function(evt) {
-                    const img = new Image();
-                    img.src = evt.target.result;
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        let w = img.width; let h = img.height;
-                        const MAX = 800; 
-                        if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } } 
-                        else { if (h > MAX) { w *= MAX / h; h = MAX; } }
-                        canvas.width = w; canvas.height = h;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, w, h);
-                        
-                        const fotoBase64Comprimida = canvas.toDataURL('image/jpeg', 0.6);
-                        
-                        guardarReporteYEnviarCorreo(
-                            document.getElementById('nombreCiudadano').value, 
-                            document.getElementById('correoCiudadano').value, 
-                            document.getElementById('barrioInput').value, 
-                            Array.from(checks).map(c => c.value).join(' + '), 
-                            fotoBase64Comprimida, 
-                            esAntigua
-                        );
-                    }
-                };
-                lector.readAsDataURL(archivoFoto);
+                    comprimirYGuardar(archivoFoto, nombre, correo, barrio, tiposSeleccionados, esAntigua);
+                }).catch(() => {
+                    comprimirYGuardar(archivoFoto, nombre, correo, barrio, tiposSeleccionados, false);
+                });
+            } catch (e) {
+                comprimirYGuardar(archivoFoto, nombre, correo, barrio, tiposSeleccionados, false);
             }
         });
 
-        // FUNCIÓN BLINDADA DIRECTA POR FETCH (Evita cualquier error 404 de la librería de EmailJS)
-        async function enviarCorreoEmailJS(params) {
-            try {
-                const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        service_id: 'service_0koh8rt',
-                        template_id: 'template_plhn05d',
-                        user_id: 'rESIJn9mCExlpi316',
-                        template_params: params
-                    })
-                });
-                if (response.ok) {
-                    console.log("Correo enviado con éxito por EmailJS");
-                } else {
-                    const errText = await response.text();
-                    console.error("Fallo EmailJS:", errText);
-                }
-            } catch (e) {
-                console.error("Error de red EmailJS:", e);
-            }
+        // Función clave que comprime la foto (evita que los 5-10MB de la cámara del celular colapsen Firebase)
+        function comprimirYGuardar(archivoFoto, nombre, correo, barrio, tiposSeleccionados, esAntigua) {
+            const lector = new FileReader();
+            lector.onload = function (eventoFoto) {
+                const img = new Image();
+                img.src = eventoFoto.target.result;
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width;
+                    let h = img.height;
+                    const MAX = 800; // Límite seguro para móvil y PC
+                    if (w > h) {
+                        if (w > MAX) { h *= MAX / w; w = MAX; }
+                    } else {
+                        if (h > MAX) { w *= MAX / h; h = MAX; }
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+
+                    // Convierte la imagen a JPG comprimido
+                    let fotoBase64Comprimida = canvas.toDataURL('image/jpeg', 0.6);
+                    guardarReporteYEnviarCorreo(nombre, correo, barrio, tiposSeleccionados, fotoBase64Comprimida, esAntigua);
+                };
+            };
+            if (archivoFoto) lector.readAsDataURL(archivoFoto);
         }
 
         async function guardarReporteYEnviarCorreo(nombre, correo, barrio, tipo, fotoBase64, esAntigua) {
+            if (!window.addDoc) {
+                showToast("Error: Firebase no está conectado aún.", "error");
+                restaurarBotonFormulario();
+                return;
+            }
+
             let idUnico = Date.now();
             let radicadoOF = "ATESA-" + new Date().getFullYear() + "-" + Math.floor(1000 + Math.random() * 9000);
-            
+            let nuevoReporte = {
+                id: idUnico, radicado: radicadoOF, nombre: nombre, correo: correo, barrio: barrio,
+                tipo: tipo, foto: fotoBase64, lat: selectedLat, lng: selectedLng, estado: 'activo',
+                timestamp: idUnico, fechaCreacion: new Date().toLocaleString('es-CO'), validaciones: 0,
+                esAntigua: esAntigua, timestampProceso: null, timestampResolucion: null
+            };
+
             try {
-                await addDoc(collection(db, "reportes_atesa"), { id: idUnico, radicado: radicadoOF, nombre: nombre, correo: correo, barrio: barrio, tipo: tipo, foto: fotoBase64, lat: selectedLat, lng: selectedLng, estado: 'activo', timestamp: idUnico, fechaCreacion: new Date().toLocaleString('es-CO'), validaciones: 0, esAntigua: esAntigua });
-                
-                // Dispara el correo mediante la función directa por fetch
-                await enviarCorreoEmailJS({
+                // Guardar en Firebase
+                await window.addDoc(window.collection(window.db, "reportes_atesa"), nuevoReporte);
+
+                // Enviar correo real vía EmailJS con la estructura original que funciona perfecto
+                let templateParams = {
                     to_email: correo,
                     nombre: nombre,
                     radicado: radicadoOF,
                     tipo: tipo,
                     barrio: barrio
-                });
+                };
 
-                showToast(`¡Reporte radicado! Correo enviado a ${correo}`);
-                
+                emailjs.send('service_0koh8rt', 'template_plhn05d', templateParams)
+                    .then(function(response) {
+                        showToast(`¡Correo real enviado con éxito a <b>${correo}</b>! Radicado <b>${radicadoOF}</b>`, 'success', 6000);
+                    }, function(error) {
+                        console.error('Error EmailJS:', error);
+                        showToast("Reporte guardado, pero falló el envío del correo real.", "error");
+                    });
+
                 document.getElementById('reportForm').reset();
-                cargarReportesFirebase();
+                window.cargarReportesFirebase();
             } catch (error) {
-                console.error(error);
-                showToast("Error al guardar en la nube.", "error");
+                console.error("Error al guardar en Firebase:", error);
+                showToast("Error al conectar con la base de datos.", "error");
             }
-            
-            let btn = document.getElementById('btnSubmit');
-            btn.disabled = false; btn.classList.replace('bg-gray-500', 'bg-green-600');
+            restaurarBotonFormulario();
+        }
+
+        function restaurarBotonFormulario() {
+            const btnSubmit = document.getElementById('btnSubmit');
+            btnSubmit.disabled = false;
+            btnSubmit.classList.replace('bg-gray-500', 'bg-green-600');
             document.getElementById('btnText').innerHTML = 'Radicar y Enviar Correo 🚀';
         }
 
-        window.cambiarEstadoAdmin = async function(id, nuevoEstado) {
-            let rep = reportesDB.find(r => r.firestoreId === id);
-            await updateDoc(doc(db, "reportes_atesa", id), { estado: nuevoEstado, [(nuevoEstado === 'proceso' ? 'timestampProceso' : 'timestampResolucion')]: Date.now() });
-            
-            if(nuevoEstado === 'resuelto') { showToast("¡Punto Limpio ATESA recuperado!"); confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); } 
-            else { showToast("Estado actualizado"); }
-            
-            if(rep && rep.correo && (nuevoEstado === 'proceso' || nuevoEstado === 'resuelto')) {
-                let msj = nuevoEstado === 'proceso' ? "Los operarios de ATESA van en ruta a atender tu reporte." : "Este punto crítico ha sido limpiado y solucionado por completo.";
-                await enviarCorreoEmailJS({
+        async function cambiarEstadoAdmin(firestoreId, nuevoEstado) {
+            let rep = reportesDB.find(r => r.firestoreId === firestoreId);
+            let actualizacion = { estado: nuevoEstado };
+            let mensajeEstadoCorreo = "";
+
+            if (nuevoEstado === 'proceso') {
+                actualizacion.timestampProceso = Date.now();
+                mensajeEstadoCorreo = "¡Buenas noticias! Los operarios de ATESA ya van en ruta a atender tu reporte.";
+                showToast(`Estado actualizado a En Proceso para <b>${rep.correo}</b>.`);
+            } else if (nuevoEstado === 'resuelto') {
+                actualizacion.timestampResolucion = Date.now();
+                mensajeEstadoCorreo = "¡Felicitaciones! Este punto crítico ha sido limpiado y solucionado por completo.";
+                showToast("¡Punto Limpio ATESA recuperado! Reporte cerrado.");
+                tirarConfeti();
+            } else {
+                showToast("Estado actualizado.", "info");
+            }
+
+            await window.updateDoc(window.doc(window.db, "reportes_atesa", firestoreId), actualizacion);
+
+            if (nuevoEstado === 'proceso' || nuevoEstado === 'resuelto') {
+                let templateParamsEstado = {
                     to_email: rep.correo,
                     nombre: rep.nombre,
                     radicado: rep.radicado,
-                    tipo: `Actualización: ${nuevoEstado.toUpperCase()} - ${msj}`,
+                    tipo: `Actualización de Estado: ${nuevoEstado.toUpperCase()} - ${mensajeEstadoCorreo}`,
                     barrio: rep.barrio
-                });
+                };
+                emailjs.send('service_0koh8rt', 'template_plhn05d', templateParamsEstado)
+                    .then(function(response) {
+                        console.log('Correo de estado enviado con éxito', response);
+                    }, function(error) {
+                        console.error('Error al enviar correo de estado:', error);
+                    });
             }
-            
-            cargarReportesFirebase();
+            window.cargarReportesFirebase();
+        }
+
+        function exportarExcel() {
+            let datos = reportesDB.map(r => ({
+                Radicado_ATESA: r.radicado, Barrio: r.barrio, Ciudadano: r.nombre,
+                Correo: r.correo, Mezcla_Residuos: r.tipo, Estado: r.estado.toUpperCase(),
+                Fecha: r.fechaCreacion, Metricas_Tiempo: obtenerTextoTiempo(r)
+            }));
+            let workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(datos), "Reportes_ATESA");
+            XLSX.writeFile(workbook, "BaseDatos_ATESA_SM.xlsx");
+            showToast("Archivo Excel Institucional descargado.");
+        }
+
+        function exportarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFont("helvetica", "bold");
+            doc.text("Punto Critico SM - Reporte Institucional ATESA", 14, 20);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.text(`Fecha de generacion: ${new Date().toLocaleString('es-CO')}`, 14, 28);
+            let y = 38;
+            reportesDB.forEach((r, idx) => {
+                if (y > 270) { doc.addPage(); y = 20; }
+                doc.setFont("helvetica", "bold");
+                doc.text(`${idx + 1}. Radicado: ${r.radicado}`, 14, y);
+                doc.setFont("helvetica", "normal");
+                doc.text(`Ciudadano: ${r.nombre} (${r.correo})`, 14, y + 6);
+                doc.text(`Ubicacion: ${r.barrio} - Estado: ${r.estado.toUpperCase()}`, 14, y + 12);
+                doc.text(`Residuos: ${r.tipo}`, 14, y + 18);
+                y += 26;
+            });
+            doc.save("Informe_ATESA_SM.pdf");
+            showToast("Informe PDF Institucional generado.");
         }
 
         const adminsPermitidos = ['jesus@equipo.com', 'stix@equipo.com', 'alcides@equipo.com'];
+        function abrirLogin() {
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('loginModal').classList.add('flex');
+        }
+        function cerrarLogin() {
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('loginModal').classList.remove('flex');
+        }
         document.getElementById('loginForm').addEventListener('submit', function (e) {
             e.preventDefault();
             if (adminsPermitidos.includes(document.getElementById('emailLogin').value.trim().toLowerCase())) {
-                isAdmin = true; 
-                document.getElementById('btnAdminNav').classList.remove('hidden'); document.getElementById('btnLogout').classList.remove('hidden'); document.getElementById('btnLogin').classList.add('hidden');
-                actualizarInterfaz(); showToast("¡Acceso Institucional Autorizado!");
-            } else showToast("Acceso denegado.", "error");
-            window.cerrarLogin(); document.getElementById('loginForm').reset();
+                showToast("¡Acceso Institucional ATESA Autorizado!");
+                isAdmin = true;
+                document.getElementById('btnAdminNav').classList.remove('hidden');
+                document.getElementById('btnLogout').classList.remove('hidden');
+                document.getElementById('btnLogin').classList.add('hidden');
+                actualizarInterfaz();
+            } else {
+                showToast("Acceso denegado.", "error");
+            }
+            cerrarLogin();
+            document.getElementById('loginForm').reset();
         });
 
-        window.toggleAdmin = function() {
-            var vC = document.getElementById('vistaCiudadano'), vA = document.getElementById('adminDashboard');
-            if (vA.classList.contains('hidden')) { vC.classList.add('hidden'); vA.classList.remove('hidden'); document.getElementById('btnAdminNav').innerHTML = 'Volver al Mapa'; }
-            else { vC.classList.remove('hidden'); vA.classList.add('hidden'); document.getElementById('btnAdminNav').innerHTML = 'Panel Admin'; }
+        function cerrarSesionAdmin() {
+            isAdmin = false;
+            document.getElementById('btnAdminNav').classList.add('hidden');
+            document.getElementById('btnLogout').classList.add('hidden');
+            document.getElementById('btnLogin').classList.remove('hidden');
+            document.getElementById('vistaCiudadano').classList.remove('hidden');
+            document.getElementById('adminDashboard').classList.add('hidden');
+            document.getElementById('btnAdminNav').innerHTML = 'Panel Admin & Métricas';
+            showToast("Sesión cerrada correctamente", "info");
+            actualizarInterfaz();
         }
 
-        window.cerrarSesionAdmin = function() {
-            isAdmin = false; 
-            document.getElementById('btnAdminNav').classList.add('hidden'); document.getElementById('btnLogout').classList.add('hidden'); document.getElementById('btnLogin').classList.remove('hidden'); document.getElementById('vistaCiudadano').classList.remove('hidden'); document.getElementById('adminDashboard').classList.add('hidden');
-            actualizarInterfaz(); showToast("Sesión cerrada", "info");
+        function toggleAdmin() {
+            var vistaC = document.getElementById('vistaCiudadano');
+            var vistaA = document.getElementById('adminDashboard');
+            if (vistaA.classList.contains('hidden')) {
+                vistaC.classList.add('hidden'); vistaA.classList.remove('hidden');
+                document.getElementById('btnAdminNav').innerHTML = 'Volver al Mapa Público';
+            } else {
+                vistaC.classList.remove('hidden'); vistaA.classList.add('hidden');
+                document.getElementById('btnAdminNav').innerHTML = 'Panel Admin & Métricas';
+            }
         }
 
-        window.abrirLogin = function(){ document.getElementById('loginModal').classList.replace('hidden', 'flex'); }
-        window.cerrarLogin = function() { document.getElementById('loginModal').classList.replace('flex', 'hidden'); }
-        window.abrirFoto = function(urlData) { document.getElementById('fotoPreview').src = urlData; document.getElementById('fotoModal').classList.replace('hidden', 'flex'); }
-        window.cerrarFoto = function(){ document.getElementById('fotoModal').classList.replace('flex', 'hidden'); }
+        function tirarConfeti() {
+            var duration = 3 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 4000 };
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) { return clearInterval(interval); }
+                var particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random() * (0.3 - 0.1) + 0.1, y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random() * (0.9 - 0.7) + 0.7, y: Math.random() - 0.2 } }));
+            }, 250);
+        }
 
-        cargarReportesFirebase();
+        function abrirFoto(urlData) {
+            document.getElementById('fotoPreview').src = urlData;
+            document.getElementById('fotoModal').classList.remove('hidden');
+            document.getElementById('fotoModal').classList.add('flex');
+        }
+        function cerrarFoto() {
+            document.getElementById('fotoModal').classList.add('hidden');
+            document.getElementById('fotoModal').classList.remove('flex');
+        }
     </script>
 </body>
 </html>
