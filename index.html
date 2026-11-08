@@ -422,7 +422,11 @@
                         </div>
                         <span class="inline-block mt-2 text-xs font-bold px-2.5 py-1 rounded-full border ${badgeClass}">${statusText}</span>
                         <p class="text-sm text-gray-700 mt-2">📍 Sector: <b>${rep.barrio}</b></p>
-                        <p class="text-xs text-gray-500 mt-0.5">👤 Por: ${rep.nombre} (${rep.correo}) • 🕒 ${rep.fechaCreacion}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+      👤 Por: <span class="font-medium text-gray-700">${rep.nombre}</span> 
+      ${typeof isAdmin !== 'undefined' && isAdmin ? `<span class="text-blue-600 font-mono font-bold ml-1">(${rep.correo})</span>` : ''} 
+      • 🕒 ${rep.fechaCreacion}
+    </p>
                         <div class="mt-3 pt-2 border-t flex justify-between items-center text-xs">
                             <span class="text-gray-600 font-medium">👥 ${rep.validaciones || 0} vecinos confirman</span>
                             <button onclick="confirmarReporte('${rep.firestoreId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">
