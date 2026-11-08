@@ -6,7 +6,7 @@
     <title>Punto Crítico SM | ATESA</title>
     <!-- Fuentes -->
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- Tailwind CSS (Versión original de tu plantilla) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- Leaflet (Mapas) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -487,7 +487,7 @@
             }
         }
 
-        // ENVÍO DE FORMULARIO CON COMPRESIÓN AUTOMÁTICA (Evita bloqueo en móvil) + EMAILJS ORIGINAL
+        // ENVÍO DE FORMULARIO CON COMPRESIÓN AUTOMÁTICA Y CORREO DIRECTO
         document.getElementById('reportForm').addEventListener('submit', function (e) {
             e.preventDefault();
             const checkboxesSeleccionados = document.querySelectorAll('.tipoResiduoCheckbox:checked');
@@ -528,7 +528,6 @@
             }
         });
 
-        // Compresor automático para fotos de cámara y galería (Funciona en PC y Móvil)
         function comprimirYGuardar(archivoFoto, nombre, correo, barrio, tiposSeleccionados, esAntigua) {
             const lector = new FileReader();
             lector.onload = function (eventoFoto) {
@@ -573,10 +572,10 @@
             };
 
             try {
-                // 1. Guardar en Firebase (ahora aceptará sin problemas las fotos de la cámara gracias a la compresión)
+                // 1. Guardar en Firebase
                 await window.addDoc(window.collection(window.db, "reportes_atesa"), nuevoReporte);
 
-                // 2. Enviar correo real vía EmailJS
+                // 2. Enviar correo real vía EmailJS con la estructura exacta de tu primer código
                 let templateParams = {
                     to_email: correo,
                     nombre: nombre,
