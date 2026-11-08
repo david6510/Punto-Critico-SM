@@ -24,12 +24,6 @@
     
     <!-- ExifReader -->
     <script src="https://cdn.jsdelivr.net/npm/exifreader@4.23.0/dist/exif-reader.min.js"></script>
-    
-    <!-- EmailJS SDK v4 -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script type="text/javascript">
-        emailjs.init({ publicKey: "rESIJn9mCExlpi316" });
-    </script>
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
@@ -119,7 +113,6 @@
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Fotografía (Cámara o Galería):</label>
                         <input type="file" id="fotoInput" accept="image/*" required class="w-full px-4 py-2 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 cursor-pointer">
-                        <p class="text-xs text-gray-500 mt-1">El sistema comprimirá la foto automáticamente para ahorrar datos.</p>
                     </div>
                     
                     <button type="submit" id="btnSubmit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition transform hover:-translate-y-1 shadow-lg flex justify-center items-center mt-4">
@@ -360,6 +353,30 @@
             }
         });
 
+        // FUNCIÓN BLINDADA DIRECTA POR FETCH (Evita cualquier error 404 de la librería de EmailJS)
+        async function enviarCorreoEmailJS(params) {
+            try {
+                const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        service_id: 'service_0koh8rt',
+                        template_id: 'template_plhn05d',
+                        user_id: 'rESIJn9mCExlpi316',
+                        template_params: params
+                    })
+                });
+                if (response.ok) {
+                    console.log("Correo enviado con éxito por EmailJS");
+                } else {
+                    const errText = await response.text();
+                    console.error("Fallo EmailJS:", errText);
+                }
+            } catch (e) {
+                console.error("Error de red EmailJS:", e);
+            }
+        }
+
         async function guardarReporteYEnviarCorreo(nombre, correo, barrio, tipo, fotoBase64, esAntigua) {
             let idUnico = Date.now();
             let radicadoOF = "ATESA-" + new Date().getFullYear() + "-" + Math.floor(1000 + Math.random() * 9000);
@@ -367,27 +384,22 @@
             try {
                 await addDoc(collection(db, "reportes_atesa"), { id: idUnico, radicado: radicadoOF, nombre: nombre, correo: correo, barrio: barrio, tipo: tipo, foto: fotoBase64, lat: selectedLat, lng: selectedLng, estado: 'activo', timestamp: idUnico, fechaCreacion: new Date().toLocaleString('es-CO'), validaciones: 0, esAntigua: esAntigua });
                 
-                // LLAVE PÚBLICA INCRUSTADA DIRECTAMENTE AQUÍ PARA EVITAR EL ERROR 404
-                emailjs.send('service_0koh8rt', 'template_plhn05d', { 
-                    to_email: correo, 
-                    nombre: nombre, 
-                    radicado: radicadoOF, 
-                    tipo: tipo, 
-                    barrio: barrio 
-                }, { publicKey: 'rESIJn9mCExlpi316' }).then(() => {
-                    showToast(`¡Reporte radicado! Correo enviado a ${correo}`);
-                }).catch((err) => {
-                    console.error('Error EmailJS:', err);
-                    // Esta alerta te dirá exactamente QUÉ está mal en EmailJS si vuelve a fallar
-                    alert("Motivo del fallo del correo: " + (err.text || "Revisa tu cuenta de EmailJS"));
-                    showToast("Reporte guardado, pero falló el correo.", "error");
+                // Dispara el correo mediante la función directa por fetch
+                await enviarCorreoEmailJS({
+                    to_email: correo,
+                    nombre: nombre,
+                    radicado: radicadoOF,
+                    tipo: tipo,
+                    barrio: barrio
                 });
+
+                showToast(`¡Reporte radicado! Correo enviado a ${correo}`);
                 
                 document.getElementById('reportForm').reset();
                 cargarReportesFirebase();
             } catch (error) {
                 console.error(error);
-                showToast("Error de conexión a la nube.", "error");
+                showToast("Error al guardar en la nube.", "error");
             }
             
             let btn = document.getElementById('btnSubmit');
@@ -402,16 +414,15 @@
             if(nuevoEstado === 'resuelto') { showToast("¡Punto Limpio ATESA recuperado!"); confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); } 
             else { showToast("Estado actualizado"); }
             
-            // Envío de correo al ciudadano cuando el administrador cambia el estado
             if(rep && rep.correo && (nuevoEstado === 'proceso' || nuevoEstado === 'resuelto')) {
                 let msj = nuevoEstado === 'proceso' ? "Los operarios de ATESA van en ruta a atender tu reporte." : "Este punto crítico ha sido limpiado y solucionado por completo.";
-                emailjs.send('service_0koh8rt', 'template_plhn05d', { 
-                    to_email: rep.correo, 
-                    nombre: rep.nombre, 
-                    radicado: rep.radicado, 
-                    tipo: `Actualización: ${nuevoEstado.toUpperCase()} - ${msj}`, 
-                    barrio: rep.barrio 
-                }, { publicKey: 'rESIJn9mCExlpi316' }).catch(err => console.error("Error EmailJS Admin:", err));
+                await enviarCorreoEmailJS({
+                    to_email: rep.correo,
+                    nombre: rep.nombre,
+                    radicado: rep.radicado,
+                    tipo: `Actualización: ${nuevoEstado.toUpperCase()} - ${msj}`,
+                    barrio: rep.barrio
+                });
             }
             
             cargarReportesFirebase();
