@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Punto Crítico SM |</title>
+    
+    <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- Leaflet (Mapas) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- Librerías para Exportar a Excel y PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- ExifReader -->
+    <script src="https://cdn.jsdelivr.net/npm/exifreader@4.23.0/dist/exif-reader.min.js"></script>
+
+    <!-- EmailJS SDK (Para correos reales) -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script type="text/javascript">
+        // Inicializa EmailJS con tu Public Key real
+        emailjs.init("rESIJn9mCExlpi31G");
+    </script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        #map { height: 380px; z-index: 1; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        .toast-enter { animation: slideIn 0.3s forwards; }
+        .toast-exit { animation: slideOut 0.3s forwards; }
+        .loader { border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid #ffffff; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px;}
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Notificaciones Flotantes -->
+    <div id="toastContainer" class="fixed top-20 right-5 z-50 flex flex-col gap-2"></div>
+
+    <!-- NAVEGACIÓN -->
+    <nav class="bg-blue-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                📍 Punto <span class="text-blue-400">Crítico SM</span> <span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-normal"></span>
+            </h1>
+            <div class="flex gap-3 items-center">
+                <button id="btnAdminNav" onclick="toggleAdmin()" class="hidden bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-2 px-4 rounded-lg transition">
+                    ⚙️ Panel Admin & Métricas
+                </button>
+                <button id="btnLogin" onclick="abrirLogin()" class="bg-white/20 hover:bg-white/30 font-semibold py-2 px-4 rounded-lg transition">
+                    👤 Admin Login
+                </button>
+                <button id="btnLogout" onclick="cerrarSesionAdmin()" class="hidden bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- VISTA CIUDADANO -->
+    <div id="vistaCiudadano">
+        <!-- Hero Section -->
+        <div class="bg-gradient-to-br from-blue-900 to-blue-500 text-white text-center py-14 px-4 rounded-b-[3rem] shadow-md">
+            <h2 class="text-3xl md:text-4xl font-bold mb-3">Hacer visible el problema es el primer paso</h2>
+            <p class="text-lg opacity-90 max-w-2xl mx-auto">Sube tu reporte. Notificación automática directa a tu correo vía ATESA.</p>
+        </div>
+
+        <!-- Estadísticas Rápidas -->
+        <div class="max-w-7xl mx-auto px-4 -mt-8 mb-8 relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white p-5 rounded-2xl shadow-md border-l-4 border-red-500 flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">Reportes Activos</p>
+                    <h3 id="statActivos" class="text-2xl font-bold text-gray-800">0</h3>
+                </div>
+                <span class="text-3xl">🔴</span>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-md border-l-4 border-blue-500 flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">En Proceso / ATESA</p>
+                    <h3 id="statProceso" class="text-2xl font-bold text-gray-800">0</h3>
+                </div>
+                <span class="text-3xl">🔵</span>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-md border-l-4 border-green-500 flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">Puntos Limpios Totales</p>
+                    <h3 id="statResueltos" class="text-2xl font-bold text-gray-800">0</h3>
+                </div>
+                <span class="text-3xl">🟢</span>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 mb-12 grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
+            <!-- Izquierda: Mapa y Formulario -->
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl p-6">
+                <div class="flex justify-between items-center mb-2 border-b pb-2">
+                    <h3 class="text-xl font-bold text-blue-900">1. Localiza y Reporta</h3>
+                    <button onclick="usarMiUbicacion()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold px-3 py-1.5 rounded-lg text-sm transition flex items-center gap-1">
+                        📍 Usar mi GPS Actual
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mb-4">Toca el mapa o usa el GPS. El sistema enviará un correo real a tu bandeja.</p>
+                
+                <div id="map" class="w-full rounded-xl border-2 border-gray-200 mb-6"></div>
+                
+                <form id="reportForm" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Tu Nombre:</label>
+                            <input type="text" id="nombreCiudadano" placeholder="Ej. Laura Martínez" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Correo Electrónico Real:</label>
+                            <input type="email" id="correoCiudadano" placeholder="tucorreo@gmail.com" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Sector o Barrio:</label>
+                            <input type="text" id="barrioInput" placeholder="Ej. El Rodadero, Mamatoco..." required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        </div>
+                    </div>
+                    
+                    <!-- Selección Múltiple de Residuos -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Tipos de Residuos Presentes (Puedes marcar varios):</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition">
+                                <input type="checkbox" value="Plásticos y Empaques" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                                <span class="text-sm font-medium">♻️ Plásticos/Empaques</span>
+                            </label>
+                            <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition">
+                                <input type="checkbox" value="Escombros" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                                <span class="text-sm font-medium">🧱 Escombros</span>
+                            </label>
+                            <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition">
+                                <input type="checkbox" value="Orgánicos" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                                <span class="text-sm font-medium">🍎 Orgánicos</span>
+                            </label>
+                            <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition">
+                                <input type="checkbox" value="Voluminosos (Muebles/Llantas)" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                                <span class="text-sm font-medium">🛋️ Voluminosos (Muebles)</span>
+                            </label>
+                        </div>
+                        <p id="errorCheckbox" class="text-sm text-red-500 mt-2 hidden font-semibold">❌ Debes seleccionar al menos un tipo de residuo.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Fotografía (Evidencia):</label>
+                        <input type="file" id="fotoInput" accept="image/*" required class="w-full px-4 py-2 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
+                    </div>
+                    <button type="submit" id="btnSubmit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition transform hover:-translate-y-1 shadow-lg flex justify-center items-center mt-4">
+                        <span id="btnText">Radicar y Enviar Correo</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Derecha: Feed Público -->
+            <div class="bg-white rounded-2xl shadow-xl p-6 flex flex-col h-[780px]">
+                <h3 class="text-xl font-bold text-blue-900 mb-2 border-b pb-2">Feed Institucional (Nube)</h3>
+                <p class="text-xs text-gray-500 mb-3">Trazabilidad de reportes conectados a ATESA.</p>
+                <div id="feedList" class="overflow-y-auto pr-2 space-y-4 flex-1 mt-2">
+                    <!-- Feed dinámico -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ZONAS MÁS REPORTADAS -->
+        <div class="max-w-7xl mx-auto px-4 mb-12">
+            <div class="bg-white rounded-2xl shadow-xl p-8 border-t-4 border-blue-900">
+                <h3 class="text-2xl font-bold text-blue-900 mb-2">📊 Zonas y Sectores con Mayor Incidencia</h3>
+                <p class="text-gray-500 mb-6 text-sm">Resumen estadístico basado en los reportes de la nube en Santa Marta.</p>
+                <div id="estadisticasBarrios" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <!-- Generado por JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TARJETAS DE EDUCACIÓN AMBIENTAL -->
+        <div class="max-w-7xl mx-auto px-4 mb-16">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-green-600">
+                    <h4 class="font-bold text-lg text-blue-900 mb-2">🌱 ¿Por qué surgen los puntos críticos?</h4>
+                    <p class="text-sm text-gray-600 leading-relaxed">La disposición inadecuada de residuos en esquinas y lotes baldíos de Santa Marta genera vectores de enfermedades, malos olores y contaminación directa de fuentes hídricas urbanas.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-blue-600">
+                    <h4 class="font-bold text-lg text-blue-900 mb-2">♻️ El Rol de la Operadora ATESA</h4>
+                    <p class="text-sm text-gray-600 leading-relaxed">Mediante esta plataforma, los reportes ciudadanos entran directamente al sistema de trazabilidad operativa para optimizar las rutas de recolección de escombros y residuos voluminosos.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-yellow-500">
+                    <h4 class="font-bold text-lg text-blue-900 mb-2">🤝 Cultura Ciudadana Activa</h4>
+                    <p class="text-sm text-gray-600 leading-relaxed">La corresponsabilidad entre la comunidad y las entidades distritales es la única vía sostenible para recuperar el espacio público y mantener limpia nuestra ciudad.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VISTA DE ADMINISTRADOR Y MÉTRICAS -->
+    <div id="adminDashboard" class="hidden max-w-7xl mx-auto px-4 -mt-10 mb-12 relative z-10">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 border-t-8 border-yellow-400">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4 gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">⚙️ Panel de Gestión ATESA</h2>
+                    <p class="text-gray-500 mt-1">Control de radicados en la nube, tiempos de respuesta y exportación.</p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="exportarExcel()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-xl shadow transition flex items-center gap-2">
+                        📊 Descargar Excel
+                    </button>
+                    <button onclick="exportarPDF()" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-xl shadow transition flex items-center gap-2">
+                        📑 Descargar PDF
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="bg-blue-900 text-white">
+                        <tr>
+                            <th class="p-4 font-semibold">Radicado / Barrio</th>
+                            <th class="p-4 font-semibold">Ciudadano / Correo</th>
+                            <th class="p-4 font-semibold">Mezcla de Residuos</th>
+                            <th class="p-4 font-semibold text-center">Evidencia EXIF</th>
+                            <th class="p-4 font-semibold text-center">Validaciones</th>
+                            <th class="p-4 font-semibold">Tiempos</th>
+                            <th class="p-4 font-semibold">Gestión de Estado</th>
+                            <th class="p-4 font-semibold text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminTableBody" class="divide-y divide-gray-200">
+                        <!-- Filas dinámicas -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LOGIN ADMIN -->
+    <div id="loginModal" class="fixed inset-0 bg-black/60 z-[2000] hidden justify-center items-center backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl max-w-md w-full mx-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-blue-900">Ingreso Institucional</h3>
+                <button onclick="cerrarLogin()" class="text-gray-400 hover:text-gray-800 text-3xl font-bold">&times;</button>
+            </div>
+            <form id="loginForm" class="space-y-4">
+                <input type="email" id="emailLogin" placeholder="Correo institucional (@equipo.com)" required class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="password" id="passLogin" placeholder="Contraseña" required class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                <button type="submit" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3 px-4 rounded-xl transition shadow-lg mt-2">Verificar Acceso</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL FOTO -->
+    <div id="fotoModal" class="fixed inset-0 bg-black/80 z-[3000] hidden justify-center items-center backdrop-blur-sm">
+        <div class="bg-white p-4 rounded-2xl max-w-2xl w-full mx-4 relative shadow-2xl">
+            <button onclick="cerrarFoto()" class="absolute -top-4 -right-4 bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-full font-bold text-xl shadow-lg flex items-center justify-center">&times;</button>
+            <img id="fotoPreview" src="" alt="Evidencia" class="w-full max-h-[70vh] object-contain rounded-lg">
+        </div>
+    </div>
+
+    <!-- SCRIPTS FIREBASE SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPLq2PvdyOJUGDIws-0WtFF6Urfkk_TzU",
+            authDomain: "punto-critico-sm.firebaseapp.com",
+            projectId: "punto-critico-sm",
+            storageBucket: "punto-critico-sm.firebasestorage.app",
+            messagingSenderId: "617349673858",
+            appId: "1:617349673858:web:ed5f66b86d29abfeb9559b",
+            measurementId: "G-JB65HST5G6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.getDocs = getDocs;
+        window.updateDoc = updateDoc;
+        window.deleteDoc = deleteDoc;
+        window.doc = doc;
+
+        window.cargarReportesFirebase();
+    </script>
+
+    <!-- SCRIPT PRINCIPAL DE LA APLICACIÓN -->
+    <script>
+        function showToast(message, type = 'success', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const colors = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-500' : 'bg-blue-600';
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '📧';
+            toast.className = `${colors} text-white px-6 py-4 rounded-xl shadow-2xl font-semibold flex items-center gap-3 toast-enter max-w-md border-2 border-white/20`;
+            toast.innerHTML = `<span class="text-2xl">${icon}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        var map = L.map('map').setView([11.24079, -74.19904], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        
+        var userMarker; 
+        var selectedLat = 11.24079; 
+        var selectedLng = -74.19904;
+        var marcadoresPublicos = []; 
+        var reportesDB = [];
+
+        var redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        var blueIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        var greenIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+
+        map.on('click', function(e) {
+            selectedLat = e.latlng.lat; selectedLng = e.latlng.lng;
+            if (userMarker) { map.removeLayer(userMarker); }
+            userMarker = L.marker([selectedLat, selectedLng]).addTo(map).bindPopup("Ubicación seleccionada.").openPopup();
+        });
+
+        function usarMiUbicacion() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    selectedLat = position.coords.latitude;
+                    selectedLng = position.coords.longitude;
+                    map.setView([selectedLat, selectedLng], 16);
+                    if (userMarker) { map.removeLayer(userMarker); }
+                    userMarker = L.marker([selectedLat, selectedLng]).addTo(map).bindPopup("📍 ¡Estás aquí! Ubicación GPS obtenida.").openPopup();
+                    showToast("GPS obtenido correctamente.");
+                }, function() {
+                    showToast("No se pudo obtener tu ubicación GPS.", "error");
+                });
+            } else {
+                showToast("Tu navegador no soporta geolocalización.", "error");
+            }
+        }
+
+        async function cargarReportesFirebase() {
+            try {
+                const querySnapshot = await window.getDocs(window.collection(window.db, "reportes_atesa"));
+                reportesDB = [];
+                querySnapshot.forEach((docSnap) => {
+                    reportesDB.push({ firestoreId: docSnap.id, ...docSnap.data() });
+                });
+                actualizarInterfaz();
+            } catch (error) {
+                console.error("Error al cargar de Firebase:", error);
+            }
+        }
+        window.cargarReportesFirebase = cargarReportesFirebase;
+
+        function obtenerTextoTiempo(rep) {
+            if(rep.estado === 'activo') {
+                return "Pendiente (ATESA)";
+            } else if(rep.estado === 'proceso') {
+                let min = Math.floor((Date.now() - (rep.timestampProceso || rep.timestamp)) / (1000 * 60));
+                return `En recolección (${min} min)`;
+            } else if(rep.estado === 'resuelto') {
+                let min = Math.floor(((rep.timestampResolucion || Date.now()) - rep.timestamp) / (1000 * 60));
+                return `Solucionado en ${Math.floor(min / 60)}h ${min % 60}m`;
+            }
+            return "N/A";
+        }
+
+        function actualizarEstadisticasYZonas() {
+            document.getElementById('statActivos').innerText = reportesDB.filter(r => r.estado === 'activo').length;
+            document.getElementById('statProceso').innerText = reportesDB.filter(r => r.estado === 'proceso').length;
+            document.getElementById('statResueltos').innerText = reportesDB.filter(r => r.estado === 'resuelto').length;
+
+            let conteoBarrios = {};
+            reportesDB.forEach(r => {
+                if(r.barrio) {
+                    let b = r.barrio.trim().charAt(0).toUpperCase() + r.barrio.trim().slice(1).toLowerCase();
+                    conteoBarrios[b] = (conteoBarrios[b] || 0) + 1;
+                }
+            });
+            let contenedor = document.getElementById('estadisticasBarrios');
+            contenedor.innerHTML = '';
+            Object.keys(conteoBarrios).sort((a,b) => conteoBarrios[b] - conteoBarrios[a]).forEach(b => {
+                contenedor.innerHTML += `
+                    <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                        <p class="font-bold text-blue-900">${b}</p>
+                        <span class="bg-blue-600 text-white font-bold px-3 py-1 rounded-full text-sm">${conteoBarrios[b]} rep.</span>
+                    </div>`;
+            });
+        }
+
+        function actualizarInterfaz() {
+            actualizarEstadisticasYZonas();
+            
+            var feedList = document.getElementById('feedList');
+            var adminTable = document.getElementById('adminTableBody');
+            feedList.innerHTML = ''; adminTable.innerHTML = '';
+            marcadoresPublicos.forEach(m => map.removeLayer(m)); marcadoresPublicos = [];
+
+            [...reportesDB].reverse().forEach(function(rep) {
+                let badgeClass = "bg-red-100 text-red-800 border-red-200"; let statusText = "Enviado a ATESA"; let pinIcon = redIcon;
+                if(rep.estado === 'proceso') { badgeClass = "bg-blue-100 text-blue-800 border-blue-200"; statusText = "Operarios ATESA en ruta"; pinIcon = blueIcon; }
+                if(rep.estado === 'resuelto') { badgeClass = "bg-green-100 text-green-800 border-green-200"; statusText = "Punto Limpio ATESA ✅"; pinIcon = greenIcon; }
+
+                feedList.innerHTML += `
+                    <div class="bg-gray-50 border rounded-xl p-4 hover:shadow-md transition relative overflow-hidden">
+                        <div class="absolute top-0 right-0 bg-gray-200 text-gray-700 text-xs font-mono px-2 py-1 rounded-bl-lg font-bold">${rep.radicado}</div>
+                        <div class="flex justify-between items-start mt-4">
+                            <h4 class="font-bold text-blue-900 text-sm w-2/3 leading-tight">${rep.tipo}</h4>
+                        </div>
+                        <span class="inline-block mt-2 text-xs font-bold px-2.5 py-1 rounded-full border ${badgeClass}">${statusText}</span>
+                        <p class="text-sm text-gray-700 mt-2">📍 Sector: <b>${rep.barrio}</b></p>
+                        <p class="text-xs text-gray-500 mt-0.5">👤 Por: ${rep.nombre} (${rep.correo}) • 🕒 ${rep.fechaCreacion}</p>
+                        <div class="mt-3 pt-2 border-t flex justify-between items-center text-xs">
+                            <span class="text-gray-600 font-medium">👥 ${rep.validaciones || 0} vecinos confirman</span>
+                            <button onclick="confirmarReporte('${rep.firestoreId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">
+                                👍 Confirmar
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                let exifAlerta = rep.esAntigua ? `<br><span class="text-xs bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-bold">⚠️ Foto Antigua</span>` : `<br><span class="text-xs text-green-600 font-semibold">✅ Foto Reciente</span>`;
+                
+                adminTable.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="p-4"><span class="text-xs font-mono text-gray-500 font-bold">${rep.radicado}</span><br><span class="font-bold text-gray-800">${rep.barrio}</span></td>
+                        <td class="p-4 text-xs font-semibold text-gray-700">${rep.nombre}<br><span class="text-blue-600 font-normal">${rep.correo}</span></td>
+                        <td class="p-4 font-semibold text-gray-800 text-xs whitespace-normal w-48 leading-tight">${rep.tipo}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="abrirFoto('${rep.foto}')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 py-1.5 px-3 rounded-lg font-semibold transition text-sm">📸 Ver</button>
+                            ${exifAlerta}
+                        </td>
+                        <td class="p-4 text-center font-bold text-blue-900">${rep.validaciones || 0}</td>
+                        <td class="p-4 text-xs font-bold">${obtenerTextoTiempo(rep)}</td>
+                        <td class="p-4">
+                            <select onchange="cambiarEstadoAdmin('${rep.firestoreId}', this.value)" class="w-full p-2.5 border rounded-lg font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm cursor-pointer">
+                                <option value="activo" ${rep.estado==='activo'?'selected':''}>🔴 Reportado ATESA</option>
+                                <option value="proceso" ${rep.estado==='proceso'?'selected':''}>🔵 En Gestión / Ruta</option>
+                                <option value="resuelto" ${rep.estado==='resuelto'?'selected':''}>🟢 Resuelto</option>
+                            </select>
+                        </td>
+                        <td class="p-4 text-center">
+                            <button onclick="eliminarReporte('${rep.firestoreId}')" class="bg-red-100 hover:bg-red-600 hover:text-white text-red-700 py-1.5 px-3 rounded-lg font-semibold transition text-sm shadow-sm">🗑️ Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+                if(rep.lat && rep.lng) {
+                    let marker = L.marker([rep.lat, rep.lng], {icon: pinIcon}).addTo(map).bindPopup(`<b>${rep.radicado}</b><br>Barrio: ${rep.barrio}<br>Estado: ${statusText}`);
+                    marcadoresPublicos.push(marker);
+                }
+            });
+        }
+
+        async function confirmarReporte(firestoreId) {
+            let rep = reportesDB.find(r => r.firestoreId === firestoreId);
+            if(rep) {
+                let nuevasValidaciones = (rep.validaciones || 0) + 1;
+                await window.updateDoc(window.doc(window.db, "reportes_atesa", firestoreId), { validaciones: nuevasValidaciones });
+                showToast("¡Gracias! Has validado este punto crítico.");
+                cargarReportesFirebase();
+            }
+        }
+
+        async function eliminarReporte(firestoreId) {
+            if(confirm("¿Estás seguro de eliminar este reporte de la nube?")) {
+                await window.deleteDoc(window.doc(window.db, "reportes_atesa", firestoreId));
+                showToast("Reporte eliminado de la base de datos.", "info");
+                cargarReportesFirebase();
+            }
+        }
+
+        document.getElementById('reportForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const checkboxesSeleccionados = document.querySelectorAll('.tipoResiduoCheckbox:checked');
+            const errorCheckbox = document.getElementById('errorCheckbox');
+            
+            if (checkboxesSeleccionados.length === 0) {
+                errorCheckbox.classList.remove('hidden');
+                return;
+            }
+            errorCheckbox.classList.add('hidden');
+            
+            let tiposSeleccionados = Array.from(checkboxesSeleccionados).map(cb => cb.value).join(' + ');
+
+            const btnSubmit = document.getElementById('btnSubmit');
+            const btnText = document.getElementById('btnText');
+            btnSubmit.disabled = true; btnSubmit.classList.replace('bg-green-600', 'bg-gray-500');
+            btnText.innerHTML = '<span class="loader"></span> Guardando en Nube y Enviando Correo...';
+
+            var nombre = document.getElementById('nombreCiudadano').value;
+            var correo = document.getElementById('correoCiudadano').value;
+            var barrio = document.getElementById('barrioInput').value;
+            var archivoFoto = document.getElementById('fotoInput').files[0];
+            var lector = new FileReader();
+
+            lector.onload = function(eventoFoto) {
+                let fotoBase64 = eventoFoto.target.result;
+                let esAntigua = false;
+
+                try {
+                    ExifReader.load(archivoFoto).then(tags => {
+                        if (tags && tags['DateTimeOriginal']) {
+                            let anioFoto = parseInt(tags['DateTimeOriginal'].description.substring(0, 4));
+                            if(anioFoto < new Date().getFullYear()) { esAntigua = true; }
+                        }
+                        guardarReporteYEnviarCorreo(nombre, correo, barrio, tiposSeleccionados, fotoBase64, esAntigua);
+                    }).catch(() => { guardarReporteYEnviarCorreo(nombre, correo, barrio, tiposSeleccionados, fotoBase64, false); });
+                } catch { guardarReporteYEnviarCorreo(nombre, correo, barrio, tiposSeleccionados, fotoBase64, false); }
+            };
+            if(archivoFoto) { lector.readAsDataURL(archivoFoto); }
+        });
+
+        async function guardarReporteYEnviarCorreo(nombre, correo, barrio, tipo, fotoBase64, esAntigua) {
+            let idUnico = Date.now();
+            let radicadoOF = "ATESA-" + new Date().getFullYear() + "-" + Math.floor(1000 + Math.random() * 9000);
+
+            let nuevoReporte = {
+                id: idUnico, radicado: radicadoOF, nombre: nombre, correo: correo, barrio: barrio, tipo: tipo, foto: fotoBase64,
+                lat: selectedLat, lng: selectedLng, estado: 'activo', timestamp: idUnico,
+                timestampProceso: null, timestampResolucion: null, fechaCreacion: new Date().toLocaleString('es-CO'),
+                validaciones: 0, esAntigua: esAntigua
+            };
+
+            try {
+                // 1. Guardar en Firebase
+                await window.addDoc(window.collection(window.db, "reportes_atesa"), nuevoReporte);
+                
+                // 2. Enviar correo real vía EmailJS con tu ID correcto
+                let templateParams = {
+                    to_email: correo,
+                    nombre: nombre,
+                    radicado: radicadoOF,
+                    tipo: tipo,
+                    barrio: barrio
+                };
+
+                emailjs.send('service_0koh8rt', 'template_plhn05d', templateParams)
+                    .then(function(response) {
+                        showToast(`📧 ¡Correo real enviado con éxito a <b>${correo}</b>! Radicado <b>${radicadoOF}</b>`, 'success', 6000);
+                    }, function(error) {
+                        console.error('Error EmailJS:', error);
+                        showToast("Reporte guardado, pero falló el envío del correo real.", "error");
+                    });
+
+                document.getElementById('reportForm').reset();
+                cargarReportesFirebase();
+            } catch (error) {
+                console.error("Error al guardar en Firebase:", error);
+                showToast("Error al conectar con la base de datos.", "error");
+            }
+
+            const btnSubmit = document.getElementById('btnSubmit');
+            btnSubmit.disabled = false; btnSubmit.classList.replace('bg-gray-500', 'bg-green-600');
+            document.getElementById('btnText').innerHTML = 'Radicar y Enviar Correo 🚀';
+        }
+
+async function cambiarEstadoAdmin(firestoreId, nuevoEstado) {
+            let rep = reportesDB.find(r => r.firestoreId === firestoreId);
+            let actualizacion = { estado: nuevoEstado };
+            
+            let mensajeEstadoCorreo = "";
+            if(nuevoEstado === 'proceso') {
+                actualizacion.timestampProceso = Date.now();
+                mensajeEstadoCorreo = "¡Buenas noticias! Los operarios de ATESA ya van en ruta a atender tu reporte.";
+                showToast(`📧 Estado actualizado a En Proceso para <b>${rep.correo}</b>.`);
+            } else if(nuevoEstado === 'resuelto') {
+                actualizacion.timestampResolucion = Date.now();
+                mensajeEstadoCorreo = "¡Felicitaciones! Este punto crítico ha sido limpiado y solucionado por completo.";
+                showToast(`📧 ¡Punto Limpio ATESA recuperado! Reporte cerrado.`);
+                tirarConfeti();
+            } else {
+                showToast("Estado actualizado.", "info");
+            }
+
+            await window.updateDoc(window.doc(window.db, "reportes_atesa", firestoreId), actualizacion);
+
+            // Enviar correo de actualización de estado vía EmailJS
+            if(nuevoEstado === 'proceso' || nuevoEstado === 'resuelto') {
+                let templateParamsEstado = {
+                    to_email: rep.correo,
+                    nombre: rep.nombre,
+                    radicado: rep.radicado,
+                    tipo: `Actualización de Estado: ${nuevoEstado.toUpperCase()} - ${mensajeEstadoCorreo}`,
+                    barrio: rep.barrio
+                };
+
+                emailjs.send('service_0koh8rt', 'template_plhn05d', templateParamsEstado)
+                    .then(function(response) {
+                        console.log('Correo de estado enviado con éxito', response);
+                    }, function(error) {
+                        console.error('Error al enviar correo de estado:', error);
+                    });
+            }
+
+            cargarReportesFirebase();
+        }
+
+        function exportarExcel() {
+            let datos = reportesDB.map(r => ({
+                Radicado_ATESA: r.radicado, Barrio: r.barrio, Ciudadano: r.nombre, Correo: r.correo,
+                Mezcla_Residuos: r.tipo, Estado: r.estado.toUpperCase(), Fecha: r.fechaCreacion,
+                Metricas_Tiempo: obtenerTextoTiempo(r)
+            }));
+            let workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(datos), "Reportes_ATESA");
+            XLSX.writeFile(workbook, "BaseDatos_ATESA_SM.xlsx");
+            showToast("Archivo Excel Institucional descargado.");
+        }
+
+        function exportarPDF() {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
+            doc.setFont("helvetica", "bold"); doc.text("Punto Critico SM - Reporte Institucional ATESA", 14, 20);
+            doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(`Fecha de generacion: ${new Date().toLocaleString('es-CO')}`, 14, 28);
+            let y = 38;
+            reportesDB.forEach((r, idx) => {
+                if(y > 270) { doc.addPage(); y = 20; }
+                doc.setFont("helvetica", "bold"); doc.text(`${idx + 1}. Radicado: ${r.radicado}`, 14, y);
+                doc.setFont("helvetica", "normal");
+                doc.text(`   Ciudadano: ${r.nombre} (${r.correo})`, 14, y + 6);
+                doc.text(`   Ubicacion: ${r.barrio} | Estado: ${r.estado.toUpperCase()}`, 14, y + 12);
+                doc.text(`   Residuos: ${r.tipo}`, 14, y + 18);
+                y += 26;
+            });
+            doc.save("Informe_ATESA_SM.pdf");
+            showToast("Informe PDF Institucional generado.");
+        }
+
+        const adminsPermitidos = ['jesus@equipo.com', 'stix@equipo.com', 'alcides@equipo.com'];
+        function abrirLogin() { document.getElementById('loginModal').classList.remove('hidden'); document.getElementById('loginModal').classList.add('flex'); }
+        function cerrarLogin() { document.getElementById('loginModal').classList.add('hidden'); document.getElementById('loginModal').classList.remove('flex'); }
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (adminsPermitidos.includes(document.getElementById('emailLogin').value.trim().toLowerCase())) {
+                showToast("¡Acceso Institucional ATESA Autorizado!"); document.getElementById('btnAdminNav').classList.remove('hidden'); 
+                document.getElementById('btnLogout').classList.remove('hidden'); document.getElementById('btnLogin').classList.add('hidden');
+            } else { showToast("Acceso denegado.", "error"); }
+            cerrarLogin(); document.getElementById('loginForm').reset();
+        });
+        function cerrarSesionAdmin() {
+            document.getElementById('btnAdminNav').classList.add('hidden'); document.getElementById('btnLogout').classList.add('hidden');
+            document.getElementById('btnLogin').classList.remove('hidden'); document.getElementById('vistaCiudadano').classList.remove('hidden');
+            document.getElementById('adminDashboard').classList.add('hidden'); document.getElementById('btnAdminNav').innerHTML = '⚙️ Panel Admin & Métricas';
+            showToast("Sesión cerrada correctamente", "info");
+        }
+        function toggleAdmin() {
+            var vistaC = document.getElementById('vistaCiudadano'); var vistaA = document.getElementById('adminDashboard');
+            if (vistaA.classList.contains('hidden')) { vistaC.classList.add('hidden'); vistaA.classList.remove('hidden'); document.getElementById('btnAdminNav').innerHTML = '⬅️ Volver al Mapa Público'; }
+            else { vistaC.classList.remove('hidden'); vistaA.classList.add('hidden'); document.getElementById('btnAdminNav').innerHTML = '⚙️ Panel Admin & Métricas'; }
+        }
+        function tirarConfeti() {
+            var duration = 3 * 1000; var animationEnd = Date.now() + duration; var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 4000 };
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now(); if (timeLeft <= 0) { return clearInterval(interval); }
+                var particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random() * (0.3 - 0.1) + 0.1, y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random() * (0.9 - 0.7) + 0.7, y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+        function abrirFoto(urlData) { document.getElementById('fotoPreview').src = urlData; document.getElementById('fotoModal').classList.remove('hidden'); document.getElementById('fotoModal').classList.add('flex'); }
+        function cerrarFoto() { document.getElementById('fotoModal').classList.add('hidden'); document.getElementById('fotoModal').classList.remove('flex'); }
+    </script>
+</body>
+</html>
