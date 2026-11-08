@@ -28,10 +28,7 @@
     <!-- EmailJS SDK v4 -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script type="text/javascript">
-        // Corrección de sintaxis para EmailJS
-        emailjs.init({
-            publicKey: "rESIJn9mCExlpi316"
-        });
+        emailjs.init({ publicKey: "rESIJn9mCExlpi316" });
     </script>
 
     <style>
@@ -332,7 +329,6 @@
                 }).catch(() => { procesarYGuardar(); });
             } catch (err) { procesarYGuardar(); }
 
-            // COMPRESIÓN DE LA FOTO EN TIEMPO REAL (Evita el bloqueo de Firebase por tamaño)
             function procesarYGuardar() {
                 const lector = new FileReader();
                 lector.onload = function(evt) {
@@ -341,14 +337,13 @@
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
                         let w = img.width; let h = img.height;
-                        const MAX = 800; // Redimensiona la foto para que no supere 800px
+                        const MAX = 800; 
                         if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } } 
                         else { if (h > MAX) { w *= MAX / h; h = MAX; } }
                         canvas.width = w; canvas.height = h;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, w, h);
                         
-                        // Convierte a JPG con 60% de calidad (reduce el peso drásticamente)
                         const fotoBase64Comprimida = canvas.toDataURL('image/jpeg', 0.6);
                         
                         guardarReporteYEnviarCorreo(
@@ -372,10 +367,19 @@
             try {
                 await addDoc(collection(db, "reportes_atesa"), { id: idUnico, radicado: radicadoOF, nombre: nombre, correo: correo, barrio: barrio, tipo: tipo, foto: fotoBase64, lat: selectedLat, lng: selectedLng, estado: 'activo', timestamp: idUnico, fechaCreacion: new Date().toLocaleString('es-CO'), validaciones: 0, esAntigua: esAntigua });
                 
-                emailjs.send('service_0koh8rt', 'template_plhn05d', { to_email: correo, nombre: nombre, radicado: radicadoOF, tipo: tipo, barrio: barrio }).then(() => {
+                // LLAVE PÚBLICA INCRUSTADA DIRECTAMENTE AQUÍ PARA EVITAR EL ERROR 404
+                emailjs.send('service_0koh8rt', 'template_plhn05d', { 
+                    to_email: correo, 
+                    nombre: nombre, 
+                    radicado: radicadoOF, 
+                    tipo: tipo, 
+                    barrio: barrio 
+                }, { publicKey: 'rESIJn9mCExlpi316' }).then(() => {
                     showToast(`¡Reporte radicado! Correo enviado a ${correo}`);
                 }).catch((err) => {
                     console.error('Error EmailJS:', err);
+                    // Esta alerta te dirá exactamente QUÉ está mal en EmailJS si vuelve a fallar
+                    alert("Motivo del fallo del correo: " + (err.text || "Revisa tu cuenta de EmailJS"));
                     showToast("Reporte guardado, pero falló el correo.", "error");
                 });
                 
@@ -392,9 +396,24 @@
         }
 
         window.cambiarEstadoAdmin = async function(id, nuevoEstado) {
+            let rep = reportesDB.find(r => r.firestoreId === id);
             await updateDoc(doc(db, "reportes_atesa", id), { estado: nuevoEstado, [(nuevoEstado === 'proceso' ? 'timestampProceso' : 'timestampResolucion')]: Date.now() });
+            
             if(nuevoEstado === 'resuelto') { showToast("¡Punto Limpio ATESA recuperado!"); confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); } 
             else { showToast("Estado actualizado"); }
+            
+            // Envío de correo al ciudadano cuando el administrador cambia el estado
+            if(rep && rep.correo && (nuevoEstado === 'proceso' || nuevoEstado === 'resuelto')) {
+                let msj = nuevoEstado === 'proceso' ? "Los operarios de ATESA van en ruta a atender tu reporte." : "Este punto crítico ha sido limpiado y solucionado por completo.";
+                emailjs.send('service_0koh8rt', 'template_plhn05d', { 
+                    to_email: rep.correo, 
+                    nombre: rep.nombre, 
+                    radicado: rep.radicado, 
+                    tipo: `Actualización: ${nuevoEstado.toUpperCase()} - ${msj}`, 
+                    barrio: rep.barrio 
+                }, { publicKey: 'rESIJn9mCExlpi316' }).catch(err => console.error("Error EmailJS Admin:", err));
+            }
+            
             cargarReportesFirebase();
         }
 
