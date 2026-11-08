@@ -4,33 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Punto Crítico SM | ATESA</title>
-
     <!-- Fuentes -->
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
+    <!-- Tailwind CSS (Versión original de tu plantilla) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- Leaflet (Mapas) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <!-- Canvas Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    
     <!-- Librerías para Exportar a Excel y PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
     <!-- ExifReader -->
     <script src="https://cdn.jsdelivr.net/npm/exifreader@4.23.0/dist/exif-reader.min.js"></script>
-    
-    <!-- EmailJS SDK (Versión estándar compatible con PC y Celular) -->
+    <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script type="text/javascript">
         emailjs.init("rESIJn9mCExlpi316");
     </script>
-
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         #map { height: 380px; z-index: 1; }
@@ -45,46 +37,71 @@
     </style>
 </head>
 <body class="text-gray-800">
-
+    <!-- Notificaciones Flotantes -->
     <div id="toastContainer" class="fixed top-20 right-5 z-[5000] flex flex-col gap-2"></div>
 
     <!-- NAVEGACIÓN -->
     <nav class="bg-blue-900 text-white shadow-lg sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <h1 class="text-xl font-bold flex items-center gap-2">📍 Punto <span class="text-blue-400">Crítico SM</span></h1>
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                Punto <span class="text-blue-400">Crítico SM</span>
+                <span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-normal"></span>
+            </h1>
             <div class="flex gap-3 items-center">
-                <button id="btnAdminNav" onclick="toggleAdmin()" class="hidden bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-2 px-4 rounded-lg transition">Panel Admin & Métricas</button>
-                <button id="btnLogin" onclick="abrirLogin()" class="bg-white/20 hover:bg-white/30 font-semibold py-2 px-4 rounded-lg transition">Admin Login</button>
-                <button id="btnLogout" onclick="cerrarSesionAdmin()" class="hidden bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow">Cerrar Sesión</button>
+                <button id="btnAdminNav" onclick="toggleAdmin()" class="hidden bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-2 px-4 rounded-lg transition">
+                    Panel Admin & Métricas
+                </button>
+                <button id="btnLogin" onclick="abrirLogin()" class="bg-white/20 hover:bg-white/30 font-semibold py-2 px-4 rounded-lg transition">
+                    Admin Login
+                </button>
+                <button id="btnLogout" onclick="cerrarSesionAdmin()" class="hidden bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition shadow">
+                    Cerrar Sesión
+                </button>
             </div>
         </div>
     </nav>
 
     <!-- VISTA CIUDADANO -->
     <div id="vistaCiudadano">
+        <!-- Hero Section -->
         <div class="bg-gradient-to-br from-blue-900 to-blue-500 text-white text-center py-14 px-4 rounded-b-[3rem] shadow-md">
             <h2 class="text-3xl md:text-4xl font-bold mb-3">Hacer visible el problema es el primer paso</h2>
             <p class="text-lg opacity-90 max-w-2xl mx-auto">Sube tu reporte. Notificación automática directa a tu correo vía ATESA.</p>
         </div>
 
+        <!-- Estadísticas Rápidas -->
         <div class="max-w-7xl mx-auto px-4 -mt-8 mb-8 relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white p-5 rounded-2xl shadow-md border-l-4 border-red-500 flex justify-between items-center">
-                <div><p class="text-xs font-bold text-gray-400 uppercase">Reportes Activos</p><h3 id="statActivos" class="text-2xl font-bold text-gray-800">0</h3></div><span class="text-3xl">🔴</span>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">Reportes Activos</p>
+                    <h3 id="statActivos" class="text-2xl font-bold text-gray-800">0</h3>
+                </div>
+                <span class="text-3xl">🔴</span>
             </div>
             <div class="bg-white p-5 rounded-2xl shadow-md border-l-4 border-blue-500 flex justify-between items-center">
-                <div><p class="text-xs font-bold text-gray-400 uppercase">En Proceso / ATESA</p><h3 id="statProceso" class="text-2xl font-bold text-gray-800">0</h3></div><span class="text-3xl">🚛</span>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">En Proceso / ATESA</p>
+                    <h3 id="statProceso" class="text-2xl font-bold text-gray-800">0</h3>
+                </div>
+                <span class="text-3xl">🚛</span>
             </div>
             <div class="bg-white p-5 rounded-2xl shadow-md border-l-4 border-green-500 flex justify-between items-center">
-                <div><p class="text-xs font-bold text-gray-400 uppercase">Puntos Limpios Totales</p><h3 id="statResueltos" class="text-2xl font-bold text-gray-800">0</h3></div><span class="text-3xl">✅</span>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">Puntos Limpios Totales</p>
+                    <h3 id="statResueltos" class="text-2xl font-bold text-gray-800">0</h3>
+                </div>
+                <span class="text-3xl">✅</span>
             </div>
         </div>
 
         <div class="max-w-7xl mx-auto px-4 mb-12 grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
-            <!-- Izquierda: Formulario -->
+            <!-- Izquierda: Mapa y Formulario -->
             <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl p-6">
                 <div class="flex justify-between items-center mb-2 border-b pb-2">
                     <h3 class="text-xl font-bold text-blue-900">1. Localiza y Reporta</h3>
-                    <button onclick="usarMiUbicacion()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold px-3 py-1.5 rounded-lg text-sm transition flex items-center gap-1">📍 Usar mi GPS Actual</button>
+                    <button onclick="usarMiUbicacion()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold px-3 py-1.5 rounded-lg text-sm transition flex items-center gap-1">
+                        Usar mi GPS Actual
+                    </button>
                 </div>
                 <p class="text-sm text-gray-500 mb-4">Toca el mapa o usa el GPS. El sistema enviará un correo real a tu bandeja.</p>
                 <div id="map" class="w-full rounded-xl border-2 border-gray-200 mb-6"></div>
@@ -105,44 +122,96 @@
                         </div>
                     </div>
                     
+                    <!-- Selección Múltiple de Residuos -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Tipos de Residuos Presentes (Puedes marcar varios):</label>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition"><input type="checkbox" value="Plásticos y Empaques" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded"><span class="text-sm font-medium">♻️ Plásticos/Empaques</span></label>
-                            <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition"><input type="checkbox" value="Escombros" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded"><span class="text-sm font-medium">🧱 Escombros</span></label>
-                            <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition"><input type="checkbox" value="Orgánicos" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded"><span class="text-sm font-medium">🍎 Orgánicos</span></label>
-                            <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition"><input type="checkbox" value="Voluminosos (Muebles/Llantas)" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded"><span class="text-sm font-medium">🛏️ Voluminosos (Muebles)</span></label>
+                            <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition">
+                                <input type="checkbox" value="Plásticos y Empaques" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                                <span class="text-sm font-medium">Plásticos/Empaques</span>
+                            </label>
+                            <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition">
+                                <input type="checkbox" value="Escombros" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                                <span class="text-sm font-medium">Escombros</span>
+                            </label>
+                            <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition">
+                                <input type="checkbox" value="Orgánicos" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                                <span class="text-sm font-medium">Orgánicos</span>
+                            </label>
+                            <label class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition">
+                                <input type="checkbox" value="Voluminosos (Muebles/Llantas)" class="tipoResiduoCheckbox w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                                <span class="text-sm font-medium">Voluminosos (Muebles)</span>
+                            </label>
                         </div>
                         <p id="errorCheckbox" class="text-sm text-red-500 mt-2 hidden font-semibold">❌ Debes seleccionar al menos un tipo de residuo.</p>
                     </div>
-                    
+
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Fotografía (Cámara o Galería):</label>
-                        <input type="file" id="fotoInput" accept="image/*" required class="w-full px-4 py-2 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 cursor-pointer">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Fotografía (Evidencia - Cámara o Galería):</label>
+                        <input type="file" id="fotoInput" accept="image/*" required class="w-full px-4 py-2 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
                     </div>
-                    
+
                     <button type="submit" id="btnSubmit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition transform hover:-translate-y-1 shadow-lg flex justify-center items-center mt-4">
-                        <span id="btnText">Radicar y Enviar Correo 🚀</span>
+                        <span id="btnText">Radicar y Enviar Correo</span>
                     </button>
                 </form>
             </div>
 
-            <!-- Derecha: Feed -->
+            <!-- Derecha: Feed Público -->
             <div class="bg-white rounded-2xl shadow-xl p-6 flex flex-col h-[780px]">
                 <h3 class="text-xl font-bold text-blue-900 mb-2 border-b pb-2">Feed Institucional (Nube)</h3>
-                <div id="feedList" class="overflow-y-auto pr-2 space-y-4 flex-1 mt-2"></div>
+                <p class="text-xs text-gray-500 mb-3">Trazabilidad de reportes conectados a ATESA.</p>
+                <div id="feedList" class="overflow-y-auto pr-2 space-y-4 flex-1 mt-2">
+                    <!-- Feed dinámico -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ZONAS MÁS REPORTADAS -->
+        <div class="max-w-7xl mx-auto px-4 mb-12">
+            <div class="bg-white rounded-2xl shadow-xl p-8 border-t-4 border-blue-900">
+                <h3 class="text-2xl font-bold text-blue-900 mb-2">Zonas y Sectores con Mayor Incidencia</h3>
+                <p class="text-gray-500 mb-6 text-sm">Resumen estadístico basado en los reportes de la nube en Santa Marta.</p>
+                <div id="estadisticasBarrios" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <!-- Generado por JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TARJETAS DE EDUCACIÓN AMBIENTAL -->
+        <div class="max-w-7xl mx-auto px-4 mb-16">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-green-600">
+                    <h4 class="font-bold text-lg text-blue-900 mb-2">¿Por qué surgen los puntos críticos?</h4>
+                    <p class="text-sm text-gray-600 leading-relaxed">La disposición inadecuada de residuos en esquinas y lotes baldíos de Santa Marta genera vectores de enfermedades, malos olores y contaminación directa de fuentes hídricas urbanas.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-blue-600">
+                    <h4 class="font-bold text-lg text-blue-900 mb-2">El Rol de la Operadora ATESA</h4>
+                    <p class="text-sm text-gray-600 leading-relaxed">Mediante esta plataforma, los reportes ciudadanos entran directamente al sistema de trazabilidad operativa para optimizar las rutas de recolección de escombros y residuos voluminosos.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-yellow-500">
+                    <h4 class="font-bold text-lg text-blue-900 mb-2">Cultura Ciudadana Activa</h4>
+                    <p class="text-sm text-gray-600 leading-relaxed">La corresponsabilidad entre la comunidad y las entidades distritales es la única vía sostenible para recuperar el espacio público y mantener limpia nuestra ciudad.</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- VISTA ADMINISTRADOR -->
+    <!-- VISTA DE ADMINISTRADOR Y MÉTRICAS -->
     <div id="adminDashboard" class="hidden max-w-7xl mx-auto px-4 -mt-10 mb-12 relative z-10">
         <div class="bg-white rounded-2xl shadow-2xl p-8 border-t-8 border-yellow-400">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4 gap-4">
-                <div><h2 class="text-3xl font-bold text-gray-800">Panel de Gestión ATESA</h2></div>
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">Panel de Gestión ATESA</h2>
+                    <p class="text-gray-500 mt-1">Control de radicados en la nube, tiempos de respuesta y exportación.</p>
+                </div>
                 <div class="flex gap-3">
-                    <button onclick="exportarExcel()" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-xl">📊 Excel</button>
-                    <button onclick="exportarPDF()" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-xl">📄 PDF</button>
+                    <button onclick="exportarExcel()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-xl shadow transition flex items-center gap-2">
+                        Descargar Excel
+                    </button>
+                    <button onclick="exportarPDF()" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-xl shadow transition flex items-center gap-2">
+                        Descargar PDF
+                    </button>
                 </div>
             </div>
             <div class="overflow-x-auto rounded-lg border border-gray-200">
@@ -159,13 +228,15 @@
                             <th class="p-4 font-semibold text-center">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="adminTableBody" class="divide-y divide-gray-200"></tbody>
+                    <tbody id="adminTableBody" class="divide-y divide-gray-200">
+                        <!-- Filas dinámicas -->
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- MODALES -->
+    <!-- MODAL LOGIN ADMIN -->
     <div id="loginModal" class="fixed inset-0 bg-black/60 z-[2000] hidden justify-center items-center backdrop-blur-sm">
         <div class="bg-white p-8 rounded-2xl max-w-md w-full mx-4 shadow-2xl">
             <div class="flex justify-between items-center mb-6">
@@ -173,21 +244,22 @@
                 <button onclick="cerrarLogin()" class="text-gray-400 hover:text-gray-800 text-3xl font-bold">&times;</button>
             </div>
             <form id="loginForm" class="space-y-4">
-                <input type="email" id="emailLogin" placeholder="Correo institucional (@equipo.com)" required class="w-full px-4 py-3 border rounded-xl">
-                <input type="password" id="passLogin" placeholder="Contraseña" required class="w-full px-4 py-3 border rounded-xl">
-                <button type="submit" class="w-full bg-blue-900 text-white font-bold py-3 px-4 rounded-xl mt-2">Verificar Acceso</button>
+                <input type="email" id="emailLogin" placeholder="Correo institucional (@equipo.com)" required class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="password" id="passLogin" placeholder="Contraseña" required class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                <button type="submit" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3 px-4 rounded-xl transition shadow-lg mt-2">Verificar Acceso</button>
             </form>
         </div>
     </div>
 
+    <!-- MODAL FOTO -->
     <div id="fotoModal" class="fixed inset-0 bg-black/80 z-[3000] hidden justify-center items-center backdrop-blur-sm">
         <div class="bg-white p-4 rounded-2xl max-w-2xl w-full mx-4 relative shadow-2xl">
-            <button onclick="cerrarFoto()" class="absolute -top-4 -right-4 bg-red-500 text-white w-10 h-10 rounded-full font-bold text-xl">&times;</button>
+            <button onclick="cerrarFoto()" class="absolute -top-4 -right-4 bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-full font-bold text-xl shadow-lg flex items-center justify-center">&times;</button>
             <img id="fotoPreview" src="" alt="Evidencia" class="w-full max-h-[70vh] object-contain rounded-lg">
         </div>
     </div>
 
-    <!-- FIREBASE SDK -->
+    <!-- SCRIPTS FIREBASE SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -216,7 +288,7 @@
         }
     </script>
 
-    <!-- SCRIPT PRINCIPAL UNIFICADO -->
+    <!-- SCRIPT PRINCIPAL DE LA APLICACIÓN -->
     <script>
         let isAdmin = false;
         var map = L.map('map').setView([11.24079, -74.19904], 13);
@@ -304,22 +376,25 @@
                 }
             });
             let contenedor = document.getElementById('estadisticasBarrios');
-            contenedor.innerHTML = '';
-            Object.keys(conteoBarrios).sort((a,b) => conteoBarrios[b] - conteoBarrios[a]).forEach(b => {
-                contenedor.innerHTML += `
-                    <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
-                        <p class="font-bold text-blue-900">${b}</p>
-                        <span class="bg-blue-600 text-white font-bold px-3 py-1 rounded-full text-sm">${conteoBarrios[b]} rep.</span>
-                    </div>`;
-            });
+            if (contenedor) {
+                contenedor.innerHTML = '';
+                Object.keys(conteoBarrios).sort((a,b) => conteoBarrios[b] - conteoBarrios[a]).forEach(b => {
+                    contenedor.innerHTML += `
+                        <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                            <p class="font-bold text-blue-900">${b}</p>
+                            <span class="bg-blue-600 text-white font-bold px-3 py-1 rounded-full text-sm">${conteoBarrios[b]} rep.</span>
+                        </div>`;
+                });
+            }
         }
 
         function actualizarInterfaz() {
             actualizarEstadisticasYZonas();
             var feedList = document.getElementById('feedList');
             var adminTable = document.getElementById('adminTableBody');
-            feedList.innerHTML = '';
-            adminTable.innerHTML = '';
+            if (feedList) feedList.innerHTML = '';
+            if (adminTable) adminTable.innerHTML = '';
+            
             marcadoresPublicos.forEach(m => map.removeLayer(m));
             marcadoresPublicos = [];
 
@@ -337,46 +412,55 @@
                     pinIcon = greenIcon;
                 }
 
-                feedList.innerHTML += `
-                    <div class="bg-gray-50 border rounded-xl p-4 hover:shadow-md transition relative overflow-hidden">
-                        <div class="absolute top-0 right-0 bg-gray-200 text-gray-700 text-xs font-mono px-2 py-1 rounded-bl-lg font-bold">${rep.radicado}</div>
-                        <h4 class="font-bold text-blue-900 text-sm w-2/3 leading-tight mt-4">${rep.tipo}</h4>
-                        <span class="inline-block mt-2 text-xs font-bold px-2.5 py-1 rounded-full border ${badgeClass}">${statusText}</span>
-                        <p class="text-sm text-gray-700 mt-2">Sector: <b>${rep.barrio}</b></p>
-                        <p class="text-xs text-gray-500 mt-0.5">Por: <span class="font-medium text-gray-700">${rep.nombre}</span>
-                        ${isAdmin ? `<span class="text-blue-600 font-mono font-bold ml-1">(${rep.correo})</span>` : ''} • ${rep.fechaCreacion}</p>
-                        <div class="mt-3 pt-2 border-t flex justify-between items-center text-xs">
-                            <span class="text-gray-600 font-medium">${rep.validaciones || 0} vecinos confirman</span>
-                            <button onclick="confirmarReporte('${rep.firestoreId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">Confirmar</button>
-                        </div>
-                    </div>`;
+                if (feedList) {
+                    feedList.innerHTML += `
+                        <div class="bg-gray-50 border rounded-xl p-4 hover:shadow-md transition relative overflow-hidden">
+                            <div class="absolute top-0 right-0 bg-gray-200 text-gray-700 text-xs font-mono px-2 py-1 rounded-bl-lg font-bold">${rep.radicado}</div>
+                            <div class="flex justify-between items-start mt-4">
+                                <h4 class="font-bold text-blue-900 text-sm w-2/3 leading-tight">${rep.tipo}</h4>
+                            </div>
+                            <span class="inline-block mt-2 text-xs font-bold px-2.5 py-1 rounded-full border ${badgeClass}">${statusText}</span>
+                            <p class="text-sm text-gray-700 mt-2">
+                                Sector: <b>${rep.barrio}</b><br>
+                                Por: <span class="font-medium text-gray-700">${rep.nombre}</span>
+                                ${isAdmin ? `<span class="text-blue-600 font-mono font-bold ml-1">(${rep.correo})</span>` : ''}
+                                • ${rep.fechaCreacion}
+                            </p>
+                            <div class="mt-3 pt-2 border-t flex justify-between items-center text-xs">
+                                <span class="text-gray-600 font-medium">👥 ${rep.validaciones || 0} vecinos confirman</span>
+                                <button onclick="confirmarReporte('${rep.firestoreId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">Confirmar</button>
+                            </div>
+                        </div>`;
+                }
 
                 let exifAlerta = rep.esAntigua 
                     ? '<br><span class="text-xs bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-bold">⚠️ Foto Antigua</span>' 
                     : '<br><span class="text-xs text-green-600 font-semibold">✅ Foto Reciente</span>';
 
-                adminTable.innerHTML += `
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="p-4"><span class="text-xs font-mono text-gray-500 font-bold">${rep.radicado}</span><br><span class="font-bold text-gray-800">${rep.barrio}</span></td>
-                        <td class="p-4 text-xs font-semibold text-gray-700">${rep.nombre}<br><span class="text-blue-600 font-normal">${rep.correo}</span></td>
-                        <td class="p-4 font-semibold text-gray-800 text-xs whitespace-normal w-48 leading-tight">${rep.tipo}</td>
-                        <td class="p-4 text-center">
-                            <button onclick="abrirFoto('${rep.foto}')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 py-1.5 px-3 rounded-lg font-semibold transition text-sm">Ver</button>
-                            ${exifAlerta}
-                        </td>
-                        <td class="p-4 text-center font-bold text-blue-900">${rep.validaciones || 0}</td>
-                        <td class="p-4 text-xs font-bold">${obtenerTextoTiempo(rep)}</td>
-                        <td class="p-4">
-                            <select onchange="cambiarEstadoAdmin('${rep.firestoreId}', this.value)" class="w-full p-2.5 border rounded-lg font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm cursor-pointer">
-                                <option value="activo" ${rep.estado==='activo'?'selected':''}>Reportado ATESA</option>
-                                <option value="proceso" ${rep.estado==='proceso'?'selected':''}>En Gestión / Ruta</option>
-                                <option value="resuelto" ${rep.estado==='resuelto'?'selected':''}>Resuelto</option>
-                            </select>
-                        </td>
-                        <td class="p-4 text-center">
-                            <button onclick="eliminarReporte('${rep.firestoreId}')" class="bg-red-100 hover:bg-red-600 hover:text-white text-red-700 py-1.5 px-3 rounded-lg font-semibold transition text-sm shadow-sm">Eliminar</button>
-                        </td>
-                    </tr>`;
+                if (adminTable) {
+                    adminTable.innerHTML += `
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="p-4"><span class="text-xs font-mono text-gray-500 font-bold">${rep.radicado}</span><br><span class="font-bold text-gray-800">${rep.barrio}</span></td>
+                            <td class="p-4 text-xs font-semibold text-gray-700">${rep.nombre}<br><span class="text-blue-600 font-normal">${rep.correo}</span></td>
+                            <td class="p-4 font-semibold text-gray-800 text-xs whitespace-normal w-48 leading-tight">${rep.tipo}</td>
+                            <td class="p-4 text-center">
+                                <button onclick="abrirFoto('${rep.foto}')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 py-1.5 px-3 rounded-lg font-semibold transition text-sm">Ver</button>
+                                ${exifAlerta}
+                            </td>
+                            <td class="p-4 text-center font-bold text-blue-900">${rep.validaciones || 0}</td>
+                            <td class="p-4 text-xs font-bold">${obtenerTextoTiempo(rep)}</td>
+                            <td class="p-4">
+                                <select onchange="cambiarEstadoAdmin('${rep.firestoreId}', this.value)" class="w-full p-2.5 border rounded-lg font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm cursor-pointer">
+                                    <option value="activo" ${rep.estado==='activo'?'selected':''}>Reportado ATESA</option>
+                                    <option value="proceso" ${rep.estado==='proceso'?'selected':''}>En Gestión / Ruta</option>
+                                    <option value="resuelto" ${rep.estado==='resuelto'?'selected':''}>Resuelto</option>
+                                </select>
+                            </td>
+                            <td class="p-4 text-center">
+                                <button onclick="eliminarReporte('${rep.firestoreId}')" class="bg-red-100 hover:bg-red-600 hover:text-white text-red-700 py-1.5 px-3 rounded-lg font-semibold transition text-sm shadow-sm">Eliminar</button>
+                            </td>
+                        </tr>`;
+                }
 
                 if (rep.lat && rep.lng) {
                     let marker = L.marker([rep.lat, rep.lng], { icon: pinIcon }).addTo(map).bindPopup(`<b>${rep.radicado}</b><br>Barrio: ${rep.barrio}<br>Estado: ${statusText}`);
@@ -403,7 +487,7 @@
             }
         }
 
-        // ENVÍO DE FORMULARIO CON COMPRESIÓN AUTOMÁTICA PARA CELULAR Y PC + EMAILJS ORIGINAL
+        // ENVÍO DE FORMULARIO CON COMPRESIÓN AUTOMÁTICA (Evita bloqueo en móvil) + EMAILJS ORIGINAL
         document.getElementById('reportForm').addEventListener('submit', function (e) {
             e.preventDefault();
             const checkboxesSeleccionados = document.querySelectorAll('.tipoResiduoCheckbox:checked');
@@ -444,7 +528,7 @@
             }
         });
 
-        // Función clave que comprime la foto (evita que los 5-10MB de la cámara del celular colapsen Firebase)
+        // Compresor automático para fotos de cámara y galería (Funciona en PC y Móvil)
         function comprimirYGuardar(archivoFoto, nombre, correo, barrio, tiposSeleccionados, esAntigua) {
             const lector = new FileReader();
             lector.onload = function (eventoFoto) {
@@ -454,7 +538,7 @@
                     const canvas = document.createElement('canvas');
                     let w = img.width;
                     let h = img.height;
-                    const MAX = 800; // Límite seguro para móvil y PC
+                    const MAX = 800; // Máximo 800px para garantizar compatibilidad con Firebase
                     if (w > h) {
                         if (w > MAX) { h *= MAX / w; w = MAX; }
                     } else {
@@ -465,7 +549,6 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, w, h);
 
-                    // Convierte la imagen a JPG comprimido
                     let fotoBase64Comprimida = canvas.toDataURL('image/jpeg', 0.6);
                     guardarReporteYEnviarCorreo(nombre, correo, barrio, tiposSeleccionados, fotoBase64Comprimida, esAntigua);
                 };
@@ -490,10 +573,10 @@
             };
 
             try {
-                // Guardar en Firebase
+                // 1. Guardar en Firebase (ahora aceptará sin problemas las fotos de la cámara gracias a la compresión)
                 await window.addDoc(window.collection(window.db, "reportes_atesa"), nuevoReporte);
 
-                // Enviar correo real vía EmailJS con la estructura original que funciona perfecto
+                // 2. Enviar correo real vía EmailJS
                 let templateParams = {
                     to_email: correo,
                     nombre: nombre,
@@ -523,7 +606,7 @@
             const btnSubmit = document.getElementById('btnSubmit');
             btnSubmit.disabled = false;
             btnSubmit.classList.replace('bg-gray-500', 'bg-green-600');
-            document.getElementById('btnText').innerHTML = 'Radicar y Enviar Correo 🚀';
+            document.getElementById('btnText').innerHTML = 'Radicar y Enviar Correo';
         }
 
         async function cambiarEstadoAdmin(firestoreId, nuevoEstado) {
