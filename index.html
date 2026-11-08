@@ -268,10 +268,10 @@
         </div>
     </div>
 
-    <!-- SCRIPTS FIREBASE SDK (CORREGIDO PARA MÓVILES) -->
+    <!-- SCRIPTS FIREBASE SDK (CON LA VERSIÓN REAL 10.12.2) -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         const firebaseConfig = {
             apiKey: "AIzaSyDPLq2PvdyOJUGDIws-0WtFF6Urfkk_TzU",
@@ -279,7 +279,7 @@
             projectId: "punto-critico-sm",
             storageBucket: "punto-critico-sm.firebasestorage.app",
             messagingSenderId: "617349673858",
-            appId: "1:617349673858:web:ed5f66b86d29abfeb9559b",
+            appId: "1:617349673858:web:ed5f66b86d29afeb9559b",
             measurementId: "G-JB65HST5G6"
         };
         
@@ -292,8 +292,7 @@
         window.deleteDoc = deleteDoc;
         window.doc = doc;
 
-        // ESTO SOLUCIONA EL ERROR EN CELULARES:
-        // Aseguramos que la conexión a Firebase se haga solo después de cargar estas librerías.
+        // Dispara la carga solo cuando Firebase ya está listo
         if (typeof window.cargarReportesFirebase === "function") {
             window.cargarReportesFirebase();
         }
@@ -356,9 +355,9 @@
             }
         }
 
-        // DESCARGA DE FIREBASE (Segura)
+        // DESCARGA DE FIREBASE
         window.cargarReportesFirebase = async function() {
-            if (!window.db) return; // Validación de seguridad para móviles
+            if (!window.db) return;
             try {
                 const querySnapshot = await window.getDocs(window.collection(window.db, "reportes_atesa"));
                 reportesDB = [];
@@ -436,7 +435,7 @@
                     pinIcon = greenIcon; 
                 }
 
-                // AQUÍ SE APLICA LA SEGURIDAD PARA OCULTAR EL CORREO A LOS VISITANTES
+                // PRIVACIDAD: El correo solo se muestra si has iniciado sesión como administrador
                 feedList.innerHTML += `
                     <div class="bg-gray-50 border rounded-xl p-4 hover:shadow-md transition relative overflow-hidden">
                         <div class="absolute top-0 right-0 bg-gray-200 text-gray-700 text-xs font-mono px-2 py-1 rounded-bl-lg font-bold">${rep.radicado}</div>
@@ -557,6 +556,14 @@
         });
 
         async function guardarReporteYEnviarCorreo(nombre, correo, barrio, tipo, fotoBase64, esAntigua) {
+            if (!window.addDoc) {
+                showToast("Error: Firebase no está conectado aún.", "error");
+                document.getElementById('btnSubmit').disabled = false;
+                document.getElementById('btnSubmit').classList.replace('bg-gray-500', 'bg-green-600');
+                document.getElementById('btnText').innerHTML = 'Radicar y Enviar Correo 🚀';
+                return;
+            }
+            
             let idUnico = Date.now();
             let radicadoOF = "ATESA-" + new Date().getFullYear() + "-" + Math.floor(1000 + Math.random() * 9000);
             
@@ -647,7 +654,7 @@
             showToast("Informe PDF Institucional generado.");
         }
 
-        // LÓGICA DEL ADMINISTRADOR (Actualizada para proteger los correos)
+        // LÓGICA DEL ADMINISTRADOR 
         const adminsPermitidos = ['jesus@equipo.com', 'stix@equipo.com', 'alcides@equipo.com'];
         
         function abrirLogin(){
@@ -664,11 +671,11 @@
             e.preventDefault();
             if (adminsPermitidos.includes(document.getElementById('emailLogin').value.trim().toLowerCase())) {
                 showToast("¡Acceso Institucional ATESA Autorizado!");
-                isAdmin = true; // Activa la visibilidad del correo
+                isAdmin = true; 
                 document.getElementById('btnAdminNav').classList.remove('hidden');
                 document.getElementById('btnLogout').classList.remove('hidden');
                 document.getElementById('btnLogin').classList.add('hidden');
-                actualizarInterfaz(); // Refresca el feed para mostrar correos
+                actualizarInterfaz(); 
             } else { 
                 showToast("Acceso denegado.", "error"); 
             }
@@ -677,7 +684,7 @@
         });
         
         function cerrarSesionAdmin() {
-            isAdmin = false; // Oculta nuevamente los correos
+            isAdmin = false; 
             document.getElementById('btnAdminNav').classList.add('hidden');
             document.getElementById('btnLogout').classList.add('hidden');
             document.getElementById('btnLogin').classList.remove('hidden');
@@ -685,7 +692,7 @@
             document.getElementById('adminDashboard').classList.add('hidden');
             document.getElementById('btnAdminNav').innerHTML = 'Panel Admin & Métricas';
             showToast("Sesión cerrada correctamente", "info");
-            actualizarInterfaz(); // Refresca el feed para ocultar los correos
+            actualizarInterfaz(); 
         }
         
         function toggleAdmin() {
